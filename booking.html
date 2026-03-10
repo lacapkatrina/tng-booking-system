@@ -1168,6 +1168,35 @@
         </div>
     </div>
 
+    <!-- MOCK PAYMENT GATEWAY OVERLAY -->
+    <div class="overlay" id="payment-overlay"
+        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; z-index:9000; background:rgba(0,0,0,0.8); align-items:center; justify-content:center;">
+        <div
+            style="background:#fff; border-radius:12px; width:450px; max-width:95%; padding:30px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,0.3);">
+            <div style="font-size:30px; margin-bottom:15px;">🔒</div>
+            <h2 style="font-size:1.4rem; color:#1e293b; margin-bottom:10px;">Secure Payment Processing</h2>
+            <p style="color:#64748b; font-size:0.95rem; margin-bottom:25px;">You are about to pay <strong>₱<span
+                        id="payment-total-amount"></span></strong> via our secure simulated gateway.</p>
+
+            <div
+                style="background:#f8fafc; padding:20px; border-radius:8px; border:1px solid #e2e8f0; margin-bottom:30px; text-align:left;">
+                <p style="margin-bottom:8px; font-size:0.85rem; color:#475569;"><strong>Booking Ref:</strong> <span
+                        id="payment-ref"></span></p>
+                <p style="margin-bottom:8px; font-size:0.85rem; color:#475569;"><strong>Email:</strong> <span
+                        id="payment-email"></span></p>
+                <p style="margin-bottom:0px; font-size:0.85rem; color:#475569;"><strong>Method:</strong> Credit Card /
+                    GCash / Maya</p>
+            </div>
+
+            <button onclick="simulatePaymentSuccess()" id="pay-now-btn"
+                style="width:100%; background:#10B981; color:white; border:none; padding:15px; border-radius:8px; font-size:1rem; font-weight:700; cursor:pointer;">Pay
+                Now & Confirm</button>
+            <button onclick="cancelPayment()"
+                style="width:100%; background:transparent; color:#64748b; border:none; padding:12px; font-size:0.9rem; margin-top:10px; cursor:pointer; text-decoration:underline;">Cancel
+                Setup & Pay Later</button>
+        </div>
+    </div>
+
     <!-- CONFIRMATION OVERLAY -->
     <div class="overlay" id="confirmation-overlay">
         <div class="conf-card" id="conf-card-printable" style="max-height: 90vh; overflow-y: auto;">
@@ -2497,9 +2526,17 @@
                     await db.from('promo_referrals').insert([referralPayload]);
                 }
 
-                // Show confirmation
+                // Show payment gateway
                 setTimeout(() => {
-                    showConfirmation(bookingRef, payload.total_amount, bookingId);
+                    document.getElementById('payment-total-amount').textContent = payload.total_amount.toLocaleString(undefined, { minimumFractionDigits: 2 });
+                    document.getElementById('payment-ref').textContent = bookingRef;
+                    document.getElementById('payment-email').textContent = payload.customer_email;
+
+                    window.currentPendingPaymentId = bookingId;
+                    window.currentPendingRef = bookingRef;
+                    window.currentPendingTotal = payload.total_amount;
+
+                    document.getElementById('payment-overlay').style.display = 'flex';
                     btn.textContent = 'Book Now & Pay Securely';
                     btn.disabled = false;
                 }, 1200);
@@ -2517,6 +2554,32 @@
             banner.textContent = msg;
             banner.classList.add('visible');
             banner.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        async function simulatePaymentSuccess() {
+            const btn = document.getElementById('pay-now-btn');
+            btn.textContent = 'Processing Payment...';
+            btn.disabled = true;
+
+            try {
+                // Update booking to paid
+                await db.from('bookings').update({ payment_status: 'paid' }).eq('id', window.currentPendingPaymentId);
+
+                // Hide payment, show confirmation
+                document.getElementById('payment-overlay').style.display = 'none';
+                showConfirmation(window.currentPendingRef, window.currentPendingTotal, window.currentPendingPaymentId);
+            } catch (e) {
+                console.error('Payment update error', e);
+                alert('Payment processing failed. Please try again.');
+            } finally {
+                btn.textContent = 'Pay Now & Confirm';
+                btn.disabled = false;
+            }
+        }
+
+        function cancelPayment() {
+            document.getElementById('payment-overlay').style.display = 'none';
+            showError('Payment cancelled. Your booking was saved as pending payment.');
         }
 
         function showConfirmation(ref, totalAmount, bId) {
