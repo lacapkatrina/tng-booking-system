@@ -2586,20 +2586,46 @@
 
         async function simulatePaymentSuccess() {
             const btn = document.getElementById('pay-now-btn');
-            btn.textContent = 'Processing Payment...';
+            btn.textContent = 'Contacting Xendit Gateway...';
             btn.disabled = true;
 
             try {
-                // Update booking to paid
-                await db.from('bookings').update({ payment_status: 'paid' }).eq('id', window.currentPendingPaymentId);
+                const p = product;
+                const custName = document.getElementById('cust-name').value || 'Customer';
 
-                // Hide payment, show confirmation
-                document.getElementById('payment-overlay').style.display = 'none';
-                showConfirmation(window.currentPendingRef, window.currentPendingTotal, window.currentPendingPaymentId);
+                // We make an un-authenticated call to the edge function.
+                // The edge function will securely look up the API key inside Supabase using the business unit.
+                const { data, error } = await supabase.functions.invoke('create-xendit-invoice', {
+                    body: JSON.stringify({
+                        booking_id: window.currentPendingPaymentId,
+                        external_id: window.currentPendingRef,
+                        amount: window.currentPendingTotal,
+                        payer_email: document.getElementById('payment-email').textContent,
+                        description: `Booking: ${p.name}`,
+                        customer: {
+                            given_names: custName,
+                            mobile_number: document.getElementById('cust-phone').value || ''
+                        },
+                        success_redirect_url: window.location.origin + '/booking.html?success=true&ref=' + window.currentPendingRef + '&bookingId=' + window.currentPendingPaymentId + '&product=' + p.id,
+                        failure_redirect_url: window.location.origin + '/booking.html?failed=true&ref=' + window.currentPendingRef,
+                        business_unit_id: p.business_unit_id
+                    })
+                });
+
+                if (error) throw error;
+                if (!data || !data.invoice_url) throw new Error("No invoice URL returned");
+
+                // Save invoice ID back to bookings table just in case immediately for tracing
+                await db.from('bookings').update({ xendit_reference: data.id }).eq('id', window.currentPendingPaymentId);
+
+                btn.textContent = 'Redirecting to Secure Gateway...';
+
+                // Redirect user to actual Xendit payment link!
+                window.location.href = data.invoice_url;
+
             } catch (e) {
-                console.error('Payment update error', e);
-                alert('Payment processing failed. Please try again.');
-            } finally {
+                console.error('Xendit creation error', e);
+                alert('Could not instantiate Xendit payment. Error: ' + (e.message || JSON.stringify(e)));
                 btn.textContent = 'Pay Now & Confirm';
                 btn.disabled = false;
             }
@@ -2607,7 +2633,7 @@
 
         function cancelPayment() {
             document.getElementById('payment-overlay').style.display = 'none';
-            showError('Payment cancelled. Your booking was saved as pending payment.');
+            showError('Payment intent cancelled. You can retry paying in the admin portal.');
         }
 
         function showConfirmation(ref, totalAmount, bId) {
