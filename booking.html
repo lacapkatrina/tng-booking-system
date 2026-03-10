@@ -1422,6 +1422,29 @@
             };
 
             renderBookingPage();
+
+            // CHECK FOR REDIRECT FROM XENDIT
+            if (params.get('success') === 'true') {
+                const bId = params.get('bookingId');
+                const bRef = params.get('ref');
+
+                // Fetch booking to populate state for confirmation UI
+                const { data: bData } = await db.from('bookings').select('*').eq('id', bId).single();
+                if (bData) {
+                    state.date = bData.booking_date;
+                    state.time = bData.booking_time;
+                    state.quantity = bData.quantity;
+
+                    // Show confirmation overlay
+                    setTimeout(() => {
+                        showConfirmation(bRef, bData.total_amount, bId);
+                    }, 500);
+                }
+            }
+
+            if (params.get('failed') === 'true') {
+                showError('Payment was not completed. Your booking is saved as pending.');
+            }
         }
 
         // ---- Render Full Page ----
