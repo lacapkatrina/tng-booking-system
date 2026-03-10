@@ -2616,10 +2616,15 @@
                 const p = product;
                 const custName = document.getElementById('cust-name').value || 'Customer';
 
+                // Verification
+                if (!p || !p.business_unit_id) {
+                    throw new Error("This product is not linked to a venue (missing business_unit_id). Please check the admin portal.");
+                }
+
                 // We make an un-authenticated call to the edge function.
                 // The edge function will securely look up the API key inside Supabase using the business unit.
                 const { data, error } = await db.functions.invoke('create-xendit-invoice', {
-                    body: JSON.stringify({
+                    body: {
                         booking_id: window.currentPendingPaymentId,
                         external_id: window.currentPendingRef,
                         amount: window.currentPendingTotal,
@@ -2632,7 +2637,7 @@
                         success_redirect_url: window.location.origin + '/booking.html?success=true&ref=' + window.currentPendingRef + '&bookingId=' + window.currentPendingPaymentId + '&product=' + p.id,
                         failure_redirect_url: window.location.origin + '/booking.html?failed=true&ref=' + window.currentPendingRef,
                         business_unit_id: p.business_unit_id
-                    })
+                    }
                 });
 
                 if (error) throw error;
@@ -2648,11 +2653,18 @@
 
             } catch (e) {
                 console.error('Xendit creation error', e);
-                // Try to extract the specific error message from the edge function
                 let errorMsg = e.message || JSON.stringify(e);
-                if (e.context && e.context.json && e.context.json.error) {
-                    errorMsg = e.context.json.error;
+
+                // Supabase FunctionsHttpError handling
+                if (e.context) {
+                    try {
+                        const body = await e.context.json();
+                        if (body && body.error) errorMsg = body.error;
+                    } catch (jsonErr) {
+                        // fallback if not json
+                    }
                 }
+
                 alert('Payment Error: ' + errorMsg);
                 btn.textContent = 'Redirect to Secure Gateway';
                 btn.disabled = false;
