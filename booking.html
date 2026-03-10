@@ -2648,8 +2648,13 @@
 
             } catch (e) {
                 console.error('Xendit creation error', e);
-                alert('Could not instantiate Xendit payment. Error: ' + (e.message || JSON.stringify(e)));
-                btn.textContent = 'Pay Now & Confirm';
+                // Try to extract the specific error message from the edge function
+                let errorMsg = e.message || JSON.stringify(e);
+                if (e.context && e.context.json && e.context.json.error) {
+                    errorMsg = e.context.json.error;
+                }
+                alert('Payment Error: ' + errorMsg);
+                btn.textContent = 'Redirect to Secure Gateway';
                 btn.disabled = false;
             }
         }

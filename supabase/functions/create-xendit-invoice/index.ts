@@ -13,6 +13,8 @@ serve(async (req) => {
 
     try {
         const body = await req.json();
+        console.log("Create Xendit Invoice Body:", body);
+
         const {
             booking_id,
             external_id,
@@ -24,6 +26,10 @@ serve(async (req) => {
             failure_redirect_url,
             business_unit_id
         } = body;
+
+        if (!business_unit_id) {
+            throw new Error("Missing business_unit_id in request");
+        }
 
         // init supabase client with service role
         const supabaseClient = createClient(
@@ -37,19 +43,28 @@ serve(async (req) => {
             .select('api_key_encrypted, active')
             .eq('business_unit_id', business_unit_id)
             .eq('gateway_name', 'xendit')
-            .single()
+            .maybeSingle()
 
-        if (gatewayError || !gatewayData) {
-            throw new Error('Payment gateway not configured for this business unit');
+        if (gatewayError) {
+            throw new Error(`Database error looking up gateway: ${gatewayError.message}`);
+        }
+
+        if (!gatewayData) {
+            throw new Error(`Xendit gateway NOT configured in 'payment_gateway_settings' for business_unit_id: ${business_unit_id}. Please ensure you added the secret key in the admin portal.`);
         }
 
         if (!gatewayData.active) {
-            throw new Error('Payment gateway is currently disabled');
+            throw new Error('Xendit payment gateway is currently disabled in your settings.');
         }
 
         const xenditApiKey = gatewayData.api_key_encrypted;
+        if (!xenditApiKey) {
+            throw new Error("Xendit API key is empty in database settings.");
+        }
 
         // Contact Xendit API
+        console.log(`Calling Xendit for ${external_id} with amount ${amount}`);
+
         const xenditResponse = await fetch('https://api.xendit.co/v2/invoices', {
             method: 'POST',
             headers: {
@@ -58,7 +73,7 @@ serve(async (req) => {
             },
             body: JSON.stringify({
                 external_id: external_id,
-                amount: amount,
+                amount: Number(amount),
                 payer_email: payer_email,
                 description: description,
                 customer: customer,
@@ -68,13 +83,12 @@ serve(async (req) => {
             })
         });
 
-        if (!xenditResponse.ok) {
-            const errorText = await xenditResponse.text();
-            console.error("Xendit Error Response", errorText);
-            throw new Error(`Xendit API error: ${errorText}`);
-        }
-
         const xenditData = await xenditResponse.json();
+
+        if (!xenditResponse.ok) {
+            console.error("Xendit API Error:", xenditData);
+            throw new Error(`Xendit API says: ${xenditData.message || xenditData.error_code || 'Unknown Error'}`);
+        }
 
         return new Response(JSON.stringify(xenditData), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
