@@ -1,8 +1,7 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3"
 
-const MAILGUN_DOMAIN = Deno.env.get('MAILGUN_DOMAIN')
-const MAILGUN_API_KEY = Deno.env.get('MAILGUN_API_KEY')
+const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
 
 serve(async (req) => {
     try {
@@ -54,32 +53,42 @@ serve(async (req) => {
       </div>
     `
 
-        if (!MAILGUN_API_KEY || !MAILGUN_DOMAIN) {
-            console.warn("Mailgun secrets not set. Skipping email send but marking as success.")
-            return new Response(JSON.stringify({ success: true, message: "Secrets missing" }), { status: 200 })
+        if (!RESEND_API_KEY) {
+            console.warn("RESEND_API_KEY secret not set. Skipping email send but marking as success.")
+            return new Response(JSON.stringify({ success: true, message: "Secret missing" }), { status: 200 })
         }
 
-        const formData = new URLSearchParams()
-        formData.append('from', `TNG Bookings <postmaster@${MAILGUN_DOMAIN}>`)
-        formData.append('to', customerEmail)
-        formData.append('subject', `Booking Confirmed: ${ref}`)
-        formData.append('html', htmlContent)
-
-        const response = await fetch(`https://api.mailgun.net/v3/${MAILGUN_DOMAIN}/messages`, {
+        const response = await fetch('https://api.resend.com/emails', {
             method: 'POST',
             headers: {
-                'Authorization': `Basic ${btoa('api:' + MAILGUN_API_KEY)}`
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${RESEND_API_KEY}`
             },
-            body: formData
+            body: JSON.stringify({
+                from: 'TNG Bookings <onboarding@resend.dev>',
+                to: [customerEmail],
+                subject: `Booking Confirmed: ${ref}`,
+                html: htmlContent,
+            })
         })
 
         const result = await response.json()
         console.log("Email Result:", result)
 
-        return new Response(JSON.stringify({ success: true }), { status: 200 })
+        if (!response.ok) {
+            throw new Error(result.message || "Failed to send email via Resend")
+        }
+
+        return new Response(JSON.stringify({ success: true }), {
+            headers: { 'Content-Type': 'application/json' },
+            status: 200,
+        })
 
     } catch (error) {
         console.error("Email Error:", error.message)
-        return new Response(JSON.stringify({ error: error.message }), { status: 400 })
+        return new Response(JSON.stringify({ error: error.message }), {
+            headers: { 'Content-Type': 'application/json' },
+            status: 400
+        })
     }
 })
