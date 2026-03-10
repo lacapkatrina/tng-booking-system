@@ -1,0 +1,1074 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ops Scanner | TNG Booking</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+    <style>
+        :root {
+            --primary: #FF5A5F;
+            --success: #10B981;
+            --warning: #F59E0B;
+            --danger: #EF4444;
+            --bg: #F3F4F6;
+            --card-bg: #FFFFFF;
+            --text-main: #111827;
+            --text-muted: #6B7280;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: var(--card-bg);
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            z-index: 10;
+        }
+
+        .header h1 {
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .header .status {
+            font-size: 0.8rem;
+            font-weight: 600;
+            padding: 4px 8px;
+            border-radius: 99px;
+        }
+
+        .status.online {
+            background: #D1FAE5;
+            color: #065F46;
+        }
+
+        .status.offline {
+            background: #FEE2E2;
+            color: #991B1B;
+        }
+
+        .container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* Left Side: Scanner */
+        .scanner-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            border-right: 1px solid #E5E7EB;
+            background: #FAFAFA;
+            max-width: 50%;
+        }
+
+        #reader {
+            width: 100%;
+            max-width: 500px;
+            margin: 0 auto;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            border: none !important;
+        }
+
+        .manual-search {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+            width: 100%;
+        }
+
+        .manual-search input {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #D1D5DB;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        .manual-search button {
+            padding: 12px 20px;
+            background: var(--text-main);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        /* Right Side: Results */
+        .results-section {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: var(--card-bg);
+            position: relative;
+        }
+
+        .result-card {
+            background: white;
+            border-radius: 12px;
+            border: 1px solid #E5E7EB;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+            display: none;
+        }
+
+        .result-card.active {
+            display: block;
+        }
+
+        .validation-banner {
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 1.1rem;
+        }
+
+        .val-success {
+            background: #D1FAE5;
+            color: #065F46;
+            border: 1px solid #34D399;
+        }
+
+        .val-warning {
+            background: #FEF3C7;
+            color: #92400E;
+            border: 1px solid #FBBF24;
+        }
+
+        .val-danger {
+            background: #FEE2E2;
+            color: #991B1B;
+            border: 1px solid #F87171;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #F3F4F6;
+            align-items: center;
+        }
+
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+
+        .detail-label {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .detail-value {
+            font-weight: 600;
+            font-size: 0.95rem;
+            text-align: right;
+        }
+
+        .action-btns {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 12px;
+            border-radius: 8px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: center;
+            color: white;
+            min-width: 120px;
+        }
+
+        .btn-claim {
+            background: var(--success);
+        }
+
+        .btn-noshow {
+            background: var(--warning);
+        }
+
+        .btn-void {
+            background: var(--danger);
+        }
+
+        .btn-outline {
+            background: white;
+            color: var(--text-main);
+            border: 1px solid #D1D5DB;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .addons-list {
+            margin-top: 25px;
+            border-top: 2px dashed #E5E7EB;
+            padding-top: 20px;
+        }
+
+        .addon-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #F9FAFB;
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #F3F4F6;
+        }
+
+        .addon-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .addon-name {
+            font-weight: 700;
+            color: #1F2937;
+        }
+
+        .addon-qty {
+            font-size: 0.8rem;
+            color: #6B7280;
+        }
+
+        .addon-status {
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 3px 6px;
+            border-radius: 4px;
+            margin-top: 4px;
+            display: inline-block;
+        }
+
+        .status-badge.not_claimed {
+            background: #E5E7EB;
+            color: #374151;
+        }
+
+        .status-badge.claimed {
+            background: #D1FAE5;
+            color: #065F46;
+        }
+
+        .status-badge.voided {
+            background: #FEE2E2;
+            color: #991B1B;
+        }
+
+        /* Loader */
+        .loader {
+            display: none;
+            margin: 50px auto;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .empty-state {
+            text-align: center;
+            color: var(--text-muted);
+            margin-top: 100px;
+        }
+
+        .empty-state h3 {
+            color: var(--text-main);
+            margin-bottom: 8px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+                overflow-y: auto;
+            }
+
+            .scanner-section {
+                max-width: 100%;
+                border-right: none;
+                border-bottom: 1px solid #E5E7EB;
+            }
+
+            .results-section {
+                height: auto;
+                overflow: visible;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <header class="header">
+        <h1>📸 TNG Ops Scanner <span id="staff-name" style="font-size:0.8rem; font-weight:400; color:#6B7280;"></span>
+        </h1>
+        <div style="display:flex; align-items:center; gap: 15px;">
+            <select id="branch-select"
+                style="padding: 6px 12px; border-radius: 6px; border: 1px solid #D1D5DB; background: #F9FAFB;"
+                onchange="changeBranch()">
+                <option value="">Select Branch...</option>
+            </select>
+            <div id="conn-status" class="status online">Online</div>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Scanner Panel -->
+        <div class="scanner-section">
+            <div id="reader"></div>
+            <div class="manual-search">
+                <input type="text" id="manual-input" placeholder="Enter Reference (e.g. TNG-2026-1234)"
+                    onkeypress="if(event.key==='Enter') manualSearch()">
+                <button onclick="manualSearch()">Search</button>
+            </div>
+
+            <div style="margin-top:20px; font-size:0.85rem; color:#6B7280; text-align:center;">
+                <p>Offline Queue: <strong id="queue-count">0</strong> pending syncs</p>
+                <button onclick="forceSync()"
+                    style="margin-top: 8px; font-size:0.75rem; padding: 4px 10px; cursor:pointer;">Force Sync</button>
+            </div>
+        </div>
+
+        <!-- Results Panel -->
+        <div class="results-section">
+            <div id="loader" class="loader"></div>
+
+            <div id="empty-state" class="empty-state">
+                <h3>Ready to Scan</h3>
+                <p>Scan a QR code or search manually to view booking details.</p>
+            </div>
+
+            <div id="result-card" class="result-card">
+                <div id="val-banner" class="validation-banner">Checking...</div>
+
+                <h3 style="margin-bottom: 15px; font-size: 1.25rem;">Booking Details</h3>
+
+                <div class="detail-row">
+                    <span class="detail-label">Reference</span>
+                    <span class="detail-value" id="res-ref"></span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Customer</span>
+                    <span class="detail-value" id="res-name"></span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Date & Time</span>
+                    <span class="detail-value" id="res-datetime"></span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Experience</span>
+                    <span class="detail-value" id="res-product"></span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Guests</span>
+                    <span class="detail-value" id="res-guests"></span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Payment Status</span>
+                    <span class="detail-value" id="res-payment"></span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label" style="color:#D97706;">Ops Notes / Instructions</span>
+                    <span class="detail-value" id="res-notes"
+                        style="font-weight:400; font-size:0.85rem; color:#92400E; max-width:60%;"></span>
+                </div>
+
+                <div style="margin-top:20px;">
+                    <h4 style="margin-bottom:10px; color:#374151;">Main Booking Status: <span id="main-status-badge"
+                            class="addon-status status-badge not_claimed">Not Claimed</span></h4>
+                    <div class="action-btns" id="main-actions">
+                        <!-- Buttons injected via JS -->
+                    </div>
+                </div>
+
+                <div class="addons-list" id="addons-container">
+                    <h4 style="margin-bottom: 15px; color:#374151;">Add-ons & Extras</h4>
+                    <div id="addons-list-body"></div>
+                </div>
+
+                <!-- BIRTHDAY PROMO VERIFICATION MODE -->
+                <div id="birthday-verification-section"
+                    style="display:none; margin-top:25px; border-top: 2px dashed #D1D5DB; padding-top: 20px; background: #FFFBEB; padding: 15px; border-radius: 12px; border: 1px solid #FDE68A;">
+                    <h4 style="color:#92400E; margin-bottom: 5px; display:flex; align-items:center; gap:8px;">
+                        🎂 Birthday Promo Verification
+                    </h4>
+                    <p style="font-size:0.8rem; color:#92400E; margin-bottom:15px;">This booking uses a birthday promo
+                        and requires ID verification before it can be claimed.</p>
+
+                    <div
+                        style="background:white; border-radius:8px; padding:12px; border:1px solid #FCD34D; margin-bottom:15px; display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                        <div>
+                            <span style="font-size:0.75rem; color:#6B7280; display:block;">Booking Celebrant Name</span>
+                            <strong id="bday-bk-name" style="font-size:0.9rem; color:#1F2937;"></strong>
+                        </div>
+                        <div>
+                            <span style="font-size:0.75rem; color:#6B7280; display:block;">Booking Birth Date</span>
+                            <strong id="bday-bk-date" style="font-size:0.9rem; color:#1F2937;"></strong>
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom: 15px;">
+                        <label for="id-capture"
+                            style="display:block; padding:12px; background:#D97706; color:white; text-align:center; border-radius:8px; font-weight:600; cursor:pointer;">
+                            📸 Capture ID Text (OCR)
+                        </label>
+                        <input type="file" id="id-capture" accept="image/*" capture="environment" style="display:none;"
+                            onchange="processIDCapture(this)">
+                        <div id="ocr-loader"
+                            style="display:none; text-align:center; font-size:0.85rem; color:#D97706; margin-top:10px;">
+                            Reading ID text... please wait.</div>
+                    </div>
+
+                    <div id="bday-comparison"
+                        style="display:none; background:white; border-radius:8px; padding:12px; border:1px solid #FCD34D; margin-bottom:15px;">
+                        <h5
+                            style="margin-bottom:10px; color:#92400E; border-bottom:1px solid #FEF3C7; padding-bottom:5px;">
+                            Verification Match Results</h5>
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:10px;">
+                            <div>
+                                <span style="font-size:0.75rem; color:#6B7280; display:block;">ID Name Found</span>
+                                <strong id="bday-id-name" style="font-size:0.9rem; color:#1F2937;"></strong>
+                            </div>
+                            <div>
+                                <span style="font-size:0.75rem; color:#6B7280; display:block;">ID Birth Date
+                                    Found</span>
+                                <strong id="bday-id-date" style="font-size:0.9rem; color:#1F2937;"></strong>
+                            </div>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.85rem;">
+                            <span>Name Match:</span><strong id="bday-match-name"></strong>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.85rem;">
+                            <span>Birth Date Match:</span><strong id="bday-match-date"></strong>
+                        </div>
+                        <div
+                            style="display:flex; justify-content:space-between; font-size:0.85rem; padding-top:5px; border-top:1px solid #FEF3C7;">
+                            <span>Promo Eligibility:</span><strong id="bday-match-elig"></strong>
+                        </div>
+                    </div>
+
+                    <div class="action-btns" id="bday-actions">
+                        <button class="btn btn-claim" onclick="updateBdayStatus('verified_and_claimed')">Approve &
+                            Claim</button>
+                        <button class="btn btn-void" onclick="updateBdayStatus('rejected')">Reject</button>
+                        <button class="btn btn-warning" style="background:#F59E0B; color:white;"
+                            onclick="updateBdayStatus('escalated')">Escalate</button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // INIT SUPABASE
+        const SUPABASE_URL = 'https://krjbpfjbbimqtnpjjkye.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_LYvO32XRAOV3f4Fk5RFEBQ_6L9QqNzN';
+        const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let html5QrcodeScanner = null;
+        let currentBooking = null;
+        let currentAddons = [];
+        let offlineCache = JSON.parse(localStorage.getItem('ops_offline_cache') || '[]');
+        let currentBranchId = localStorage.getItem('ops_branch_id') || '';
+        let staffUser = null;
+
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playTone(freq, type, duration) {
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            oscillator.type = type;
+            oscillator.frequency.value = freq;
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            oscillator.start();
+            gainNode.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + duration);
+            oscillator.stop(audioCtx.currentTime + duration);
+        }
+
+        function playSuccess() { playTone(800, 'sine', 0.1); setTimeout(() => playTone(1200, 'sine', 0.15), 100); }
+        function playError() { playTone(300, 'sawtooth', 0.3); }
+
+        // Connectivity handling
+        window.addEventListener('online', () => { document.getElementById('conn-status').className = 'status online'; document.getElementById('conn-status').innerText = 'Online'; syncOfflineQueue(); });
+        window.addEventListener('offline', () => { document.getElementById('conn-status').className = 'status offline'; document.getElementById('conn-status').innerText = 'Offline'; });
+        if (!navigator.onLine) { document.getElementById('conn-status').className = 'status offline'; document.getElementById('conn-status').innerText = 'Offline'; }
+
+        async function init() {
+            // Auth Check
+            const { data: { session } } = await db.auth.getSession();
+            if (!session) {
+                alert("Please log in via the Admin panel first.");
+                window.location.href = 'index.html';
+                return;
+            }
+            staffUser = session.user;
+            document.getElementById('staff-name').innerText = `(${staffUser.email})`;
+
+            // Load Branches
+            const { data: branches } = await db.from('business_units').select('*').order('name');
+            if (branches) {
+                const sel = document.getElementById('branch-select');
+                branches.forEach(b => {
+                    sel.add(new Option(b.name, b.id));
+                });
+                if (currentBranchId) sel.value = currentBranchId;
+            }
+
+            updateQueueUI();
+            startScanner();
+        }
+
+        function changeBranch() {
+            currentBranchId = document.getElementById('branch-select').value;
+            localStorage.setItem('ops_branch_id', currentBranchId);
+        }
+
+        function startScanner() {
+            if (html5QrcodeScanner) return;
+            html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: { width: 250, height: 250 } }, false);
+            html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+        }
+
+        function onScanFailure(error) {
+            // handle silently
+        }
+
+        async function onScanSuccess(decodedText, decodedResult) {
+            if (html5QrcodeScanner) {
+                html5QrcodeScanner.pause(true); // pause so it doesn't scan multiple times rapidly
+            }
+
+            try {
+                let parsed = JSON.parse(decodedText);
+                if (!parsed.ref && !parsed.id) throw "Invalid Format";
+                playSuccess();
+                await fetchBookingDetails(parsed.ref, parsed.type, parsed.id);
+            } catch (e) {
+                playError();
+                showBanner("Invalid QR Code: Not recognized by TNG System", "danger");
+            }
+
+            setTimeout(() => { if (html5QrcodeScanner) html5QrcodeScanner.resume(); }, 2000);
+        }
+
+        async function manualSearch() {
+            const ref = document.getElementById('manual-input').value.trim();
+            if (!ref) return;
+            await fetchBookingDetails(ref, 'main', null);
+        }
+
+        function setLoading(show) {
+            document.getElementById('loader').style.display = show ? 'block' : 'none';
+            document.getElementById('empty-state').style.display = 'none';
+            if (show) document.getElementById('result-card').classList.remove('active');
+        }
+
+        async function fetchBookingDetails(ref, scanType, scannedId) {
+            setLoading(true);
+
+            try {
+                // If offline and we don't have it cached, we might fail. 
+                // But let's attempt network fetch. Supabase JS will throw if absolutely offline.
+
+                let q = db.from('bookings').select('*, products(name), business_units(name), promo_codes(is_birthday_promo, birthday_promo_rule)').eq('booking_reference', ref);
+                const { data: bData, error: bErr } = await q.single();
+
+                if (bErr || !bData) throw new Error("Booking not found");
+
+                // Get Addons
+                const { data: aData } = await db.from('booking_addons').select('*').eq('booking_id', bData.id);
+
+                currentBooking = bData;
+                currentAddons = aData || [];
+
+                renderResult(scanType, scannedId);
+            } catch (err) {
+                console.error(err);
+                if (!navigator.onLine) {
+                    showBanner("You are offline. Cannot fetch new booking data.", "warning");
+                } else {
+                    playError();
+                    showBanner("Booking not found or network error.", "danger");
+                }
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        function getStatusText(str) {
+            if (!str) return 'Not Claimed';
+            return str.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+        }
+
+        function renderResult(lastScanType, scannedId) {
+            const b = currentBooking;
+            document.getElementById('result-card').classList.add('active');
+
+            document.getElementById('res-ref').innerText = b.booking_reference;
+            document.getElementById('res-name').innerText = b.customer_name;
+            document.getElementById('res-datetime').innerText = new Date(b.booking_date).toLocaleDateString() + ' ' + (b.booking_time || '');
+            document.getElementById('res-product').innerText = b.products?.name || 'Unknown Product';
+            document.getElementById('res-guests').innerText = b.quantity;
+            document.getElementById('res-payment').innerText = (b.payment_status || 'unpaid').toUpperCase();
+            document.getElementById('res-notes').innerText = b.notes || 'None';
+
+            // Main Status parsing
+            let mStatus = b.redemption_status || 'not_claimed';
+            let mBadge = document.getElementById('main-status-badge');
+            mBadge.className = 'addon-status status-badge ' + (['fully_claimed', 'claimed'].includes(mStatus) ? 'claimed' : (['cancelled', 'voided'].includes(mStatus) ? 'voided' : 'not_claimed'));
+            mBadge.innerText = getStatusText(mStatus);
+
+            let mainActionsHtml = '';
+            const bdaySection = document.getElementById('birthday-verification-section');
+            const mainActionsDiv = document.getElementById('main-actions');
+
+            // Birthday Promo Override check
+            if (b.promo_codes && b.promo_codes.is_birthday_promo) {
+                bdaySection.style.display = 'block';
+                mainActionsDiv.style.display = 'none'; // Hide generic claims
+
+                document.getElementById('bday-bk-name').innerText = b.celebrant_name || 'Not Provided';
+                document.getElementById('bday-bk-date').innerText = b.celebrant_birth_date || 'Not Provided';
+                document.getElementById('bday-comparison').style.display = 'none';
+
+                if (b.birthday_verification_status === 'verified_and_claimed' || b.birthday_verification_status === 'manager_override' || mStatus === 'claimed') {
+                    showBanner("Birthday Promo Already Claimed", "warning");
+                    document.getElementById('bday-actions').style.display = 'none';
+                } else {
+                    document.getElementById('bday-actions').style.display = 'flex';
+                }
+
+                checkDuplicatesAndSafeguards(b);
+            } else {
+                bdaySection.style.display = 'none';
+                mainActionsDiv.style.display = 'flex';
+
+                if (mStatus === 'not_claimed' || mStatus === 'arrived') {
+                    mainActionsHtml += `<button class="btn btn-claim" onclick="updateStatus('main', null, 'claimed')">Claim Entry</button>`;
+                    mainActionsHtml += `<button class="btn btn-noshow" onclick="updateStatus('main', null, 'no_show')">No-Show</button>`;
+                } else if (mStatus === 'claimed') {
+                    mainActionsHtml += `<button class="btn btn-outline" onclick="updateStatus('main', null, 'not_claimed')">Undo Claim</button>`;
+                }
+                mainActionsDiv.innerHTML = mainActionsHtml;
+            }
+
+            // Addons rendering
+            const addonsBody = document.getElementById('addons-list-body');
+            addonsBody.innerHTML = '';
+
+            if (currentAddons.length === 0) {
+                addonsBody.innerHTML = '<p style="color:#6B7280; font-size:0.9rem;">No add-ons purchased.</p>';
+            } else {
+                currentAddons.forEach(a => {
+                    let aStatus = a.redemption_status || 'not_claimed';
+                    let isScannedTarget = (lastScanType === 'addon' && scannedId == a.id);
+
+                    let bg = isScannedTarget ? '#FEF3C7' : '#F9FAFB'; // Highlight scanned one
+
+                    let badgeClass = aStatus === 'claimed' ? 'claimed' : (aStatus === 'voided' ? 'voided' : 'not_claimed');
+
+                    let html = `
+                        <div class="addon-item" style="background:${bg}; border-color:${isScannedTarget ? '#FBBF24' : '#F3F4F6'};">
+                            <div class="addon-info">
+                                <span class="addon-name">${a.addon_name}</span>
+                                <span class="addon-qty">Qty: ${a.quantity}</span>
+                                <div><span class="addon-status status-badge ${badgeClass}">${getStatusText(aStatus)}</span></div>
+                            </div>
+                            <div style="display:flex; gap:8px;">
+                                ${aStatus === 'not_claimed' ?
+                            `<button class="btn btn-claim" style="padding:8px 12px; min-width:80px; font-size:0.8rem;" onclick="updateStatus('addon', '${a.id}', 'claimed')">Claim</button>`
+                            : `<button class="btn btn-outline" style="padding:8px 12px; min-width:80px; font-size:0.8rem;" onclick="updateStatus('addon', '${a.id}', 'not_claimed')">Undo</button>`
+                        }
+                            </div>
+                        </div>
+                    `;
+                    addonsBody.insertAdjacentHTML('beforeend', html);
+                });
+            }
+
+            // Banner Logic
+            let paymentWarning = b.payment_status !== 'paid' ? " • UNPAID" : "";
+
+            if (lastScanType === 'main' && mStatus === 'claimed') {
+                showBanner("Main Booking Already Redeemed" + paymentWarning, "danger");
+                playError();
+            } else if (lastScanType === 'addon' && scannedId) {
+                let tAddon = currentAddons.find(x => x.id == scannedId);
+                if (tAddon && (tAddon.redemption_status === 'claimed' || tAddon.redemption_status === 'voided')) {
+                    showBanner("Add-on Already Redeemed/Voided!" + paymentWarning, "danger");
+                    playError();
+                } else if (tAddon) {
+                    showBanner("Valid Add-on Scan" + paymentWarning, paymentWarning ? "warning" : "success");
+                }
+            } else {
+                // Main scan successful and not claimed
+                if (b.status === 'cancelled') {
+                    showBanner("BOOKING CANCELLED", "danger");
+                    playError();
+                } else {
+                    showBanner("Valid Scan - Ready for check-in" + paymentWarning, paymentWarning ? "warning" : "success");
+                }
+            }
+        }
+
+        function showBanner(text, type) {
+            const b = document.getElementById('val-banner');
+            b.innerText = text;
+            b.className = `validation-banner val-${type}`;
+            b.style.display = 'block';
+        }
+
+        async function checkDuplicatesAndSafeguards(b) {
+            const warnings = [];
+
+            // Branch Warning
+            if (b.business_unit_id !== currentBranchId) warnings.push("⚠️ Booking is for a DIFFERENT branch.");
+
+            // Date & Rule Warning
+            const todayStr = new Date().toISOString().split('T')[0];
+            const rule = b.promo_codes.birthday_promo_rule;
+            if (b.celebrant_birth_date) {
+                if (rule === 'actual_day') {
+                    const bkMD = b.celebrant_birth_date.substring(5);
+                    const todayMD = todayStr.substring(5);
+                    if (bkMD !== todayMD) warnings.push("❌ Actual Birthday Required, but today is not their birthday.");
+                } else if (rule === 'birthday_month') {
+                    const bkM = b.celebrant_birth_date.substring(5, 7);
+                    const todayM = todayStr.substring(5, 7);
+                    if (bkM !== todayM) warnings.push("❌ Birthday Month Required, but today is not their birth month.");
+                }
+            } else {
+                warnings.push("❌ Missing Celebrant Birth Date");
+            }
+
+            // DB Duplicate Check
+            if (navigator.onLine && b.celebrant_name) {
+                const { data: dups } = await db.from('bookings')
+                    .select('id, booking_reference')
+                    .neq('id', b.id)
+                    .not('promo_code_id', 'is', null)
+                    .eq('redemption_status', 'claimed')
+                    .or(`celebrant_name.ilike.%${b.celebrant_name}%,celebrant_birth_date.eq.${b.celebrant_birth_date},customer_email.eq.${b.customer_email},customer_phone.eq.${b.customer_phone}`);
+
+                if (dups && dups.length > 0) {
+                    warnings.push(`🚨 DUPLICATE REDEMPTION FOUND: A promo claim shares details (Name, DOB, Email, or Phone). (Ref: ${dups[0].booking_reference}).`);
+                }
+            }
+
+            window.bdayWarnings = warnings;
+
+            const warnDiv = document.getElementById('bday-safeguards-warnings');
+            if (warnDiv && warnings.length > 0) {
+                warnDiv.innerHTML = warnings.map(w => `<div style="background:#FEE2E2; color:#991B1B; padding:6px; font-size:0.85rem; border-radius:4px; margin-bottom:4px; font-weight:600;">${w}</div>`).join('');
+                document.getElementById('bday-comparison').style.display = 'block';
+                evaluateBdayMatch(); // force re-evaluation to lock buttons if warnings present
+            }
+        }
+
+
+
+        async function processIDCapture(inputObj) {
+            if (!inputObj.files || inputObj.files.length === 0) return;
+            const file = inputObj.files[0];
+            const loader = document.getElementById('ocr-loader');
+            loader.style.display = 'block';
+            document.getElementById('bday-comparison').style.display = 'none';
+
+            try {
+                const worker = await Tesseract.createWorker('eng');
+                const ret = await worker.recognize(file);
+                await worker.terminate();
+
+                const text = ret.data.text;
+
+                // Very basic heuristic parsing. In reality, ID formats vary wildly.
+                // We just pass the raw detected text to regex and try to find a date and name.
+                let extractedDate = "Not Found";
+                // Look for common date formats like YYYY/MM/DD, DD/MM/YYYY, Mon DD, YYYY
+                const dateMatches = text.match(/(\d{2,4}[\/\-]\d{2}[\/\-]\d{2,4}|(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-zA-Z]*\s+\d{1,2},?\s+\d{4})/gi);
+                if (dateMatches) extractedDate = dateMatches[0];
+
+                const formattedText = text.replace(/\n/g, '  ');
+                document.getElementById('bday-id-name').value = formattedText.substring(0, 100);
+                document.getElementById('bday-id-date').value = extractedDate;
+                document.getElementById('bday-raw-ocr').innerText = text;
+
+                document.getElementById('bday-comparison').style.display = 'block';
+                evaluateBdayMatch();
+
+            } catch (err) {
+                console.error(err);
+                alert("Failed to read ID text.");
+            } finally {
+                loader.style.display = 'none';
+            }
+        }
+
+        function evaluateBdayMatch() {
+            if (!currentBooking) return;
+            const extractedName = document.getElementById('bday-id-name').value;
+            const extractedDate = document.getElementById('bday-id-date').value;
+
+            const nameParts = (currentBooking.celebrant_name || '').split(' ').map(n => n.toLowerCase());
+            let matchedParts = 0;
+            nameParts.forEach(p => {
+                if (p && extractedName.toLowerCase().includes(p)) matchedParts++;
+            });
+
+            let matchNameStr = "No";
+            let matchNameColor = "#991B1B";
+            if (nameParts.length > 0 && matchedParts === nameParts.length) {
+                matchNameStr = "Yes"; matchNameColor = "#065F46";
+            } else if (matchedParts > 0 && matchedParts >= nameParts.length / 2) {
+                matchNameStr = "Partial"; matchNameColor = "#92400E";
+            }
+
+            // Date compare
+            let bkDate = new Date(currentBooking.celebrant_birth_date);
+            let idDate = new Date(extractedDate);
+            let matchDateStr = "No";
+            let matchDateColor = "#991B1B";
+            if (idDate.toString() !== 'Invalid Date' && bkDate.toISOString().split('T')[0] === idDate.toISOString().split('T')[0]) {
+                matchDateStr = "Yes"; matchDateColor = "#065F46";
+            }
+
+            const nameEl = document.getElementById('bday-match-name');
+            nameEl.innerText = matchNameStr; nameEl.style.color = matchNameColor;
+
+            const dateEl = document.getElementById('bday-match-date');
+            dateEl.innerText = matchDateStr; dateEl.style.color = matchDateColor;
+
+            const eligEl = document.getElementById('bday-match-elig');
+            const mgrDiv = document.getElementById('bday-manager-override');
+            const btns = document.getElementById('bday-actions');
+
+            let isEligible = matchNameStr === 'Yes' && matchDateStr === 'Yes' && (!window.bdayWarnings || window.bdayWarnings.length === 0);
+
+            if (isEligible) {
+                eligEl.innerText = 'Eligible'; eligEl.style.color = '#065F46';
+                mgrDiv.style.display = 'none';
+                if (btns) btns.querySelector('.btn-claim').disabled = false;
+            } else {
+                eligEl.innerText = 'Verify Manually / Safeguard Tripped'; eligEl.style.color = '#92400E';
+                mgrDiv.style.display = 'block';
+                if (btns) btns.querySelector('.btn-claim').disabled = true;
+            }
+        }
+
+        function submitManagerOverride() {
+            const reason = document.getElementById('manager-reason').value.trim();
+            const pin = document.getElementById('manager-pin').value.trim();
+
+            if (!reason) {
+                alert("Override reason is required."); return;
+            }
+            if (pin !== '1234') { // Admin/Manager PIN rule
+                alert("Invalid PIN. Only managers can override."); return;
+            }
+
+            updateBdayStatus('manager_override', reason);
+        }
+
+        async function updateBdayStatus(status, overrideReason = "") {
+            let payload = {
+                type: 'main',
+                targetId: currentBooking.id,
+                newStatus: (status === 'verified_and_claimed' || status === 'manager_override') ? 'claimed' : currentBooking.redemption_status,
+                birthday_verification_status: status,
+                scanned_at: new Date().toISOString(),
+                staffId: staffUser.id,
+                branchId: currentBranchId,
+                bookingRef: currentBooking.booking_reference
+            };
+
+            currentBooking.birthday_verification_status = status;
+            if (payload.newStatus === 'claimed') currentBooking.redemption_status = 'claimed';
+
+            renderResult(null, null);
+
+            let auditLogPayload = {
+                booking_id: currentBooking.id,
+                scanned_by: staffUser.id,
+                branch_id: currentBranchId,
+                captured_name_text: document.getElementById('bday-id-name')?.value || '',
+                captured_dob_text: document.getElementById('bday-id-date')?.value || '',
+                presented_id_type: currentBooking.presented_id_type || 'Unknown',
+                match_result_name: document.getElementById('bday-match-name')?.innerText || '',
+                match_result_dob: document.getElementById('bday-match-date')?.innerText || '',
+                verification_status: status,
+                override_reason: overrideReason,
+                override_by: status === 'manager_override' ? 'Manager (PIN 1234)' : null
+            };
+
+            if (navigator.onLine) {
+                try {
+                    await db.from('bookings').update({
+                        redemption_status: payload.newStatus,
+                        birthday_verification_status: status,
+                        scanned_at: payload.scanned_at,
+                        scanned_by: payload.staffId
+                    }).eq('id', payload.targetId);
+
+                    await db.from('birthday_approval_logs').insert([auditLogPayload]);
+
+                    showBanner(`Birthday Promo ${status.replace(/_/g, ' ').toUpperCase()}`, "success");
+                } catch (err) {
+                    console.error(err);
+                    showBanner("Error saving birthday verification", "danger");
+                }
+            } else {
+                showBanner("Saved offline", "warning");
+                // would sync later
+            }
+        }
+
+
+        async function updateStatus(type, targetId, newStatus) {
+            let payload = {
+                type,
+                targetId: targetId || currentBooking.id,
+                newStatus,
+                scanned_at: new Date().toISOString(),
+                staffId: staffUser.id,
+                branchId: currentBranchId,
+                bookingRef: currentBooking.booking_reference
+            };
+
+            // Eager UI update
+            if (type === 'main') {
+                currentBooking.redemption_status = newStatus;
+            } else if (type === 'addon') {
+                let a = currentAddons.find(x => x.id === targetId);
+                if (a) a.redemption_status = newStatus;
+            }
+            renderResult(null, null);
+
+            // Network Execution
+            if (navigator.onLine) {
+                await executeStatusUpdate(payload);
+            } else {
+                // Store in offline queue
+                offlineCache.push(payload);
+                localStorage.setItem('ops_offline_cache', JSON.stringify(offlineCache));
+                updateQueueUI();
+                showBanner("Saved offline. Will sync when connected.", "warning");
+            }
+        }
+
+        async function executeStatusUpdate(p) {
+            try {
+                let table = p.type === 'main' ? 'bookings' : 'booking_addons';
+                const { error } = await db.from(table).update({
+                    redemption_status: p.newStatus,
+                    scanned_at: p.scanned_at,
+                    scanned_by: p.staffId
+                }).eq('id', p.targetId);
+
+                // Add to scan logs
+                await db.from('scan_logs').insert([{
+                    scan_payload: p,
+                    scanned_at: p.scanned_at,
+                    scanned_by: p.staffId,
+                    status: error ? 'error' : 'success'
+                }]);
+
+                if (error) throw error;
+            } catch (err) {
+                console.error("Execution failed", err);
+                // Push back to offline queue if it was a network failure
+                if (err.message && err.message.includes('fetch')) {
+                    offlineCache.push(p);
+                    localStorage.setItem('ops_offline_cache', JSON.stringify(offlineCache));
+                    updateQueueUI();
+                }
+            }
+        }
+
+        async function syncOfflineQueue() {
+            if (offlineCache.length === 0) return;
+            showBanner(`Syncing ${offlineCache.length} offline records...`, "warning");
+
+            let toSync = [...offlineCache];
+            offlineCache = []; // clear first to prevent double syncs if it fails halfway, we'll re-push failures
+            localStorage.setItem('ops_offline_cache', '[]');
+            updateQueueUI();
+
+            for (let p of toSync) {
+                await executeStatusUpdate(p);
+            }
+
+            showBanner(`Sync complete.`, "success");
+        }
+
+        function forceSync() {
+            if (!navigator.onLine) {
+                alert("You are currently offline.");
+                return;
+            }
+            syncOfflineQueue();
+        }
+
+        function updateQueueUI() {
+            document.getElementById('queue-count').innerText = offlineCache.length;
+        }
+
+        // START
+        document.addEventListener("DOMContentLoaded", init);
+
+    </script>
+</body>
+
+</html>

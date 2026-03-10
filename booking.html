@@ -1,0 +1,2617 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Now | TNG Experiences</title>
+    <meta name="description" content="Book your experience with TNG. Secure payments, instant confirmation.">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <!-- Flatpickr for visual pricing indicating -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <style>
+        :root {
+            --primary: #FF5A5F;
+            --primary-hover: #E0484D;
+            --primary-soft: #FFF1F2;
+            --primary-rgb: 255, 90, 95;
+            --text-main: #1A1A2E;
+            --text-secondary: #6B7280;
+            --text-light: #9CA3AF;
+            --bg: #F8F9FB;
+            --card-bg: #FFFFFF;
+            --border: #E5E7EB;
+            --border-light: #F3F4F6;
+            --success: #059669;
+            --success-soft: #ECFDF5;
+            --warning: #F59E0B;
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
+            --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+            --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.12);
+            --radius-lg: 16px;
+            --radius-md: 12px;
+            --radius-sm: 8px;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-float: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+
+            #confirmation-overlay,
+            #confirmation-overlay * {
+                visibility: visible;
+            }
+
+            #confirmation-overlay {
+                position: absolute;
+                left: 0;
+                top: 0;
+                background: white !important;
+                padding: 0 !important;
+                overflow: visible !important;
+            }
+
+            .conf-card {
+                box-shadow: none !important;
+                max-width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+
+            .conf-actions {
+                display: none !important;
+            }
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            color: var(--text-main);
+            background: var(--bg);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ========== HEADER ========== */
+        .site-header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            padding: 0 24px;
+        }
+
+        .header-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 60px;
+        }
+
+        .logo a {
+            font-weight: 800;
+            font-size: 1.3rem;
+            background: linear-gradient(135deg, var(--primary), #FF8A5C);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-decoration: none;
+        }
+
+        .header-nav {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .header-nav a {
+            text-decoration: none;
+            color: var(--text-secondary);
+            font-weight: 500;
+            font-size: 0.88rem;
+            padding: 7px 14px;
+            border-radius: 99px;
+            transition: all 0.2s;
+        }
+
+        .header-nav a:hover {
+            background: var(--border-light);
+            color: var(--text-main);
+        }
+
+        .back-link {
+            border: 1px solid var(--border) !important;
+        }
+
+        /* ========== LAYOUT ========== */
+        .booking-layout {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 24px 24px 80px;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 24px;
+        }
+
+        @media (min-width: 900px) {
+            .booking-layout {
+                grid-template-columns: 1fr 380px;
+            }
+        }
+
+        .main-content>section {
+            background: var(--card-bg);
+            padding: 28px;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            margin-bottom: 20px;
+        }
+
+        .main-content>section h2 {
+            font-size: 1.15rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .main-content>section h2 .step-num {
+            background: var(--text-main);
+            color: white;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        /* ========== HERO / PRODUCT INFO ========== */
+        .product-header {
+            margin-bottom: 20px;
+        }
+
+        .product-header h1 {
+            font-size: 2.2rem;
+            margin-bottom: 12px;
+            color: var(--text-main);
+            line-height: 1.2;
+        }
+
+        .hero-breadcrumb {
+            font-size: 0.85rem;
+            color: var(--text-light);
+            margin-bottom: 12px;
+        }
+
+        .hero-breadcrumb a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .hero-rating {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-main);
+            margin-bottom: 16px;
+        }
+
+        .hero-rating .stars {
+            color: #fbbf24;
+            letter-spacing: 2px;
+        }
+
+        .hero-rating .dot {
+            color: var(--border-color);
+            margin: 0 4px;
+        }
+
+        /* ========== KLOOK STYLE GALLERY ========== */
+        .klook-gallery {
+            position: relative;
+            border-radius: var(--radius);
+            overflow: hidden;
+            margin-bottom: 30px;
+            height: 380px;
+            /* Adjust height here */
+            background: #f0f2f5;
+        }
+
+        .klook-gallery img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s;
+        }
+
+        .klook-gallery img:hover {
+            transform: scale(1.02);
+            cursor: pointer;
+        }
+
+        /* If 5+ images, use mosaic */
+        .klook-gallery.mosaic {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr;
+            grid-template-rows: 1fr 1fr;
+            gap: 8px;
+            background: transparent;
+        }
+
+        @media (max-width: 768px) {
+            .klook-gallery {
+                height: 250px;
+            }
+
+            .klook-gallery.mosaic {
+                display: block;
+                /* Fallback to standard 1 image on very small screens or simple scroll */
+                position: relative;
+            }
+
+            .klook-gallery.mosaic .small-img-wrapper {
+                display: none;
+                /* simple workaround for mobile right now, show only first image */
+            }
+
+            .klook-gallery.mosaic .main-img-wrapper {
+                height: 100%;
+            }
+        }
+
+        .main-img-wrapper {
+            grid-column: 1 / 2;
+            grid-row: 1 / 3;
+            position: relative;
+            border-radius: var(--radius) 0 0 var(--radius);
+            overflow: hidden;
+        }
+
+        .small-img-wrapper {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .small-img-wrapper:nth-child(2) {
+            border-radius: 0;
+        }
+
+        .small-img-wrapper:nth-child(3) {
+            border-radius: 0 var(--radius) 0 0;
+        }
+
+        .small-img-wrapper:nth-child(4) {
+            border-radius: 0;
+        }
+
+        .small-img-wrapper:nth-child(5) {
+            border-radius: 0 0 var(--radius) 0;
+        }
+
+        .gallery-btn {
+            position: absolute;
+            bottom: 16px;
+            right: 16px;
+            background: white;
+            border: 1px solid var(--border);
+            padding: 8px 16px;
+            border-radius: var(--radius-sm);
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            z-index: 10;
+        }
+
+        .gallery-btn:hover {
+            background: #f8f9fa;
+        }
+
+        /* Fallback / single image layout */
+        .klook-gallery.single-img .main-img-wrapper {
+            width: 100%;
+            height: 100%;
+            border-radius: var(--radius);
+        }
+
+        .hero-badge-overlay {
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            padding: 6px 14px;
+            border-radius: 99px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            z-index: 5;
+        }
+
+        .hero-badge-overlay.popular {
+            background: var(--primary);
+            color: white;
+        }
+
+        .hero-badge-overlay.best-value {
+            background: var(--success);
+            color: white;
+        }
+
+        .hero-rating .stars {
+            color: #FBBF24;
+        }
+
+        .hero-desc {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        /* Value Props */
+        .value-props {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .value-props .vp-item {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--success);
+        }
+
+        /* ========== DATE PICKER ========== */
+        .date-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 16px;
+        }
+
+        @media (min-width: 600px) {
+            .date-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .date-grid label {
+            font-weight: 600;
+            font-size: 0.88rem;
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        .date-grid input[type="date"] {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 1rem;
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+
+        .date-grid input[type="date"]:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        /* Time Slots */
+        .time-slots-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 6px;
+        }
+
+        .time-chip {
+            padding: 10px 18px;
+            border: 2px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 0.88rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: white;
+            text-align: center;
+            line-height: 1.4;
+        }
+
+        .time-chip:hover {
+            border-color: var(--primary);
+            background: var(--primary-soft);
+        }
+
+        .time-chip.selected {
+            border-color: var(--primary);
+            background: var(--primary);
+            color: white;
+        }
+
+        .time-chip.disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            text-decoration: line-through;
+        }
+
+        .urgency-msg {
+            display: none;
+            margin-top: 10px;
+            padding: 8px 14px;
+            background: #FEF3C7;
+            border: 1px solid #F59E0B;
+            border-radius: 8px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: #92400E;
+        }
+
+        .urgency-msg.visible {
+            display: block;
+        }
+
+        /* ========== QUANTITY ========== */
+        .qty-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .qty-label h4 {
+            font-size: 1rem;
+            margin-bottom: 2px;
+        }
+
+        .qty-label p {
+            font-size: 0.82rem;
+            color: var(--text-light);
+        }
+
+        .qty-controls {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .qty-btn {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            border: 2px solid var(--border);
+            background: white;
+            cursor: pointer;
+            font-size: 1.2rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .qty-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .qty-display {
+            font-size: 1.3rem;
+            font-weight: 700;
+            min-width: 30px;
+            text-align: center;
+        }
+
+        /* ========== CUSTOMER FORM ========== */
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        @media (max-width: 600px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .form-group label {
+            font-weight: 600;
+            font-size: 0.88rem;
+            margin-bottom: 6px;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            padding: 12px 16px;
+            border: 2px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 0.95rem;
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        /* ========== SIDEBAR ========== */
+        .booking-sidebar .summary-card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 24px;
+            position: sticky;
+            top: 80px;
+        }
+
+        .summary-card h3 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+        }
+
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            font-size: 0.92rem;
+        }
+
+        .summary-row .label {
+            color: var(--text-secondary);
+        }
+
+        .summary-row .value {
+            font-weight: 600;
+        }
+
+        .summary-divider {
+            height: 1px;
+            background: var(--border);
+            margin: 16px 0;
+        }
+
+        .summary-total {
+            display: flex;
+            justify-content: space-between;
+            font-size: 1.2rem;
+            font-weight: 800;
+            margin-bottom: 20px;
+        }
+
+        .book-btn {
+            width: 100%;
+            background: var(--primary);
+            color: white;
+            padding: 16px;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-size: 1.05rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            letter-spacing: -0.3px;
+        }
+
+        .book-btn:hover {
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+        }
+
+        .book-btn:disabled {
+            background: #D1D5DB;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* ========== FLATPICKR CUSTOM STYLES ========== */
+        .flatpickr-day.has-highlight {
+            position: relative;
+        }
+
+        .flatpickr-day.has-highlight::after {
+            content: '';
+            position: absolute;
+            bottom: 4px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+        }
+
+        .flatpickr-day.is-holiday::after {
+            background: #F59E0B;
+            /* Holiday Orange */
+        }
+
+        .flatpickr-day.is-override::after {
+            background: #10B981;
+            /* Override Green */
+        }
+
+        .flatpickr-day.is-weekend {
+            color: #EF4444;
+        }
+
+        .flatpickr-calendar {
+            box-shadow: var(--shadow-lg) !important;
+            border: 1px solid var(--border) !important;
+            border-radius: 12px !important;
+        }
+
+        .flatpickr-day.selected {
+            background: var(--primary) !important;
+            border-color: var(--primary) !important;
+        }
+
+        .secure-text {
+            text-align: center;
+            font-size: 0.78rem;
+            color: var(--text-light);
+            margin-top: 12px;
+        }
+
+        .error-banner {
+            display: none;
+            margin-top: 14px;
+            padding: 10px;
+            background: #FEE2E2;
+            color: #991B1B;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            text-align: center;
+        }
+
+        .error-banner.visible {
+            display: block;
+        }
+
+        /* Price breakdown */
+        .price-breakdown {
+            margin-top: 12px;
+            background: var(--border-light);
+            border-radius: 8px;
+            padding: 12px;
+        }
+
+        .price-breakdown .pb-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.82rem;
+            margin-bottom: 4px;
+            color: var(--text-secondary);
+        }
+
+        /* ========== CONFIRMATION OVERLAY ========== */
+        .overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .overlay.visible {
+            display: flex;
+        }
+
+        .conf-card {
+            background: white;
+            border-radius: var(--radius);
+            padding: 40px;
+            text-align: center;
+            max-width: 440px;
+            width: 90%;
+            animation: slideUp 0.4s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(30px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .conf-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: var(--success);
+            color: white;
+            font-size: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+        }
+
+        .conf-card h2 {
+            font-size: 1.5rem;
+            margin-bottom: 8px;
+        }
+
+        .conf-card .ref {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            margin-bottom: 24px;
+        }
+
+        .conf-details {
+            text-align: left;
+            background: var(--bg);
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 24px;
+        }
+
+        .conf-details .cd-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.88rem;
+            padding: 6px 0;
+        }
+
+        .conf-details .cd-row .lbl {
+            color: var(--text-secondary);
+        }
+
+        .conf-details .cd-row .val {
+            font-weight: 600;
+        }
+
+        .conf-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .conf-actions button {
+            flex: 1;
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 0.9rem;
+            transition: background 0.2s;
+        }
+
+        .btn-outline-conf {
+            border: 1px solid var(--text-main);
+            background: white;
+            color: var(--text-main);
+        }
+
+        .btn-primary-conf {
+            border: none;
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary-conf:hover {
+            background: var(--primary-hover);
+        }
+
+        /* Skeleton */
+        .skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+            border-radius: var(--radius);
+        }
+
+        @keyframes shimmer {
+            0% {
+                background-position: 200% 0;
+            }
+
+            100% {
+                background-position: -200% 0;
+            }
+        }
+
+        .skeleton-hero {
+            height: 400px;
+        }
+
+        /* ========== ADD-ON CARDS (KLOOK STYLE) ========== */
+        .addon-chips {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+            gap: 16px;
+        }
+
+        .addon-card {
+            border: 2px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: white;
+            position: relative;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .addon-card:hover {
+            border-color: var(--primary);
+            box-shadow: var(--shadow-md);
+            transform: translateY(-2px);
+        }
+
+        .addon-card.selected {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.18);
+        }
+
+        .addon-card.sold-out {
+            opacity: 0.55;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .addon-img {
+            width: 100%;
+            height: 130px;
+            object-fit: cover;
+            display: block;
+        }
+
+        .addon-img-placeholder {
+            width: 100%;
+            height: 90px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.2rem;
+            background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+        }
+
+        .addon-body {
+            padding: 12px 14px 14px;
+        }
+
+        .addon-body h4 {
+            font-size: 0.95rem;
+            font-weight: 700;
+            margin-bottom: 2px;
+            color: var(--text-main);
+        }
+
+        .addon-body p {
+            font-size: 0.8rem;
+            color: var(--text-light);
+            line-height: 1.4;
+            margin-bottom: 10px;
+        }
+
+        .addon-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .addon-price {
+            font-weight: 800;
+            font-size: 1rem;
+            color: var(--text-main);
+        }
+
+        .addon-card.selected .addon-price {
+            color: var(--primary);
+        }
+
+        .addon-stock-tag {
+            font-size: 0.72rem;
+            font-weight: 600;
+            padding: 3px 8px;
+            border-radius: 99px;
+            letter-spacing: 0.3px;
+        }
+
+        .addon-stock-tag.low {
+            background: #FEF3C7;
+            color: #92400E;
+        }
+
+        .addon-stock-tag.ok {
+            background: var(--success-soft);
+            color: var(--success);
+        }
+
+        .addon-stock-tag.soldout {
+            background: #F3F4F6;
+            color: var(--text-light);
+        }
+
+        /* Selected checkmark */
+        .addon-check {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            font-size: 0.85rem;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 6px rgba(var(--primary-rgb), 0.4);
+        }
+
+        .addon-card.selected .addon-check {
+            display: flex;
+        }
+
+        /* 404 */
+        .not-found {
+            text-align: center;
+            padding: 100px 24px;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .not-found .emoji {
+            font-size: 4rem;
+            margin-bottom: 16px;
+        }
+
+        .not-found h1 {
+            font-size: 1.6rem;
+            margin-bottom: 10px;
+        }
+
+        .not-found p {
+            color: var(--text-secondary);
+            margin-bottom: 20px;
+        }
+
+        .not-found a {
+            display: inline-block;
+            background: var(--primary);
+            color: white;
+            padding: 12px 28px;
+            border-radius: 99px;
+            text-decoration: none;
+            font-weight: 700;
+        }
+
+        .fade-in {
+            animation: fadeInUp 0.45s ease forwards;
+            opacity: 0;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(16px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ========== PHOTO LIGHTBOX ========== */
+        #photo-lightbox {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.93);
+            z-index: 2000;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #photo-lightbox.open {
+            display: flex;
+        }
+
+        .lb-close {
+            position: absolute;
+            top: 20px;
+            right: 24px;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 2rem;
+            cursor: pointer;
+            line-height: 1;
+            opacity: 0.8;
+        }
+
+        .lb-close:hover {
+            opacity: 1;
+        }
+
+        .lb-img-wrap {
+            width: 90vw;
+            max-width: 920px;
+            max-height: 75vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .lb-img-wrap img {
+            max-width: 100%;
+            max-height: 75vh;
+            border-radius: 12px;
+            object-fit: contain;
+        }
+
+        .lb-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.15);
+            border: none;
+            color: white;
+            font-size: 2rem;
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            cursor: pointer;
+            backdrop-filter: blur(6px);
+            transition: background 0.2s;
+        }
+
+        .lb-nav:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        #lb-prev {
+            left: 16px;
+        }
+
+        #lb-next {
+            right: 16px;
+        }
+
+        .lb-counter {
+            margin-top: 18px;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.9rem;
+            font-weight: 500;
+            letter-spacing: 1px;
+        }
+
+        .lb-thumbs {
+            display: flex;
+            gap: 8px;
+            margin-top: 16px;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 90vw;
+        }
+
+        .lb-thumb {
+            width: 64px;
+            height: 48px;
+            border-radius: 6px;
+            object-fit: cover;
+            cursor: pointer;
+            opacity: 0.5;
+            border: 2px solid transparent;
+            transition: opacity 0.2s, border-color 0.2s;
+        }
+
+        .lb-thumb.active {
+            opacity: 1;
+            border-color: white;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- HEADER -->
+    <header class="site-header">
+        <div class="header-inner">
+            <div class="logo"><a href="index.html">TNG Experiences</a></div>
+            <nav class="header-nav">
+                <a href="#" id="back-link" class="back-link">← Back</a>
+                <a href="#">Help</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- PAGE CONTENT -->
+    <div id="page-content">
+        <div class="booking-layout">
+            <div class="main-content">
+                <div class="skeleton skeleton-hero"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CONFIRMATION OVERLAY -->
+    <div class="overlay" id="confirmation-overlay">
+        <div class="conf-card" id="conf-card-printable" style="max-height: 90vh; overflow-y: auto;">
+            <div class="conf-icon">✓</div>
+            <h2>Booking Confirmed!</h2>
+            <p class="ref">Reference: <strong id="conf-ref"></strong></p>
+
+            <!-- Dynamic Confirmation Message -->
+            <div id="conf-msg-wrapper"
+                style="display:none; margin-top:20px; text-align:left; background:#10B98115; border-radius:12px; padding:15px; border:1px solid #10B98130; color:#065F46; font-size:0.95rem;">
+                <div id="conf-msg-content"></div>
+            </div>
+
+            <div class="conf-details" style="margin-top:24px;">
+                <div class="cd-row"><span class="lbl">Experience</span><span class="val" id="conf-product"></span></div>
+                <div class="cd-row"><span class="lbl">Date</span><span class="val" id="conf-date"></span></div>
+                <div class="cd-row"><span class="lbl">Time</span><span class="val" id="conf-time"></span></div>
+                <div class="cd-row"><span class="lbl">Guests</span><span class="val" id="conf-qty"></span></div>
+                <div class="cd-row"><span class="lbl">Total</span><span class="val" id="conf-total"></span></div>
+            </div>
+
+            <!-- QR CODES SECTION -->
+            <div style="margin-top:30px; border-top:2px dashed #E5E7EB; padding-top:20px;">
+                <h3 style="font-size:1.1rem; margin-bottom:15px; color:var(--text-main);">Redemption QR Codes</h3>
+                <p style="font-size:0.85rem; color:#6B7280; margin-bottom:20px;">Please present these codes at the
+                    venue. QR codes expire after your scheduled time slot.</p>
+
+                <div style="display:flex; flex-wrap:wrap; gap:20px; justify-content:center; margin-bottom: 20px;">
+                    <div
+                        style="text-align:center; padding:15px; background:#F9FAFB; border-radius:12px; border:1px solid #E5E7EB;">
+                        <div id="conf-main-qr" style="margin-bottom:12px; display:inline-block;"></div>
+                        <div style="font-weight:700; font-size:0.9rem; color:#1F2937;">Main Booking</div>
+                        <div style="font-size:0.75rem; color:#6B7280; margin-top:4px;">ENTRY &amp; BASE PKG</div>
+                    </div>
+                    <!-- Addons container -->
+                    <div id="conf-addon-qrs" style="display:flex; gap:20px; flex-wrap:wrap; justify-content:center;">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Terms & Conditions -->
+            <div id="conf-terms-wrapper"
+                style="display:none; margin-top:30px; border-top:1px solid #E5E7EB; padding-top:20px; text-align:left;">
+                <h3 style="font-size:1rem; margin-bottom:10px; color:var(--text-main);">Terms &amp; Conditions</h3>
+                <div id="conf-terms-content" style="font-size:0.8rem; color:#4B5563; line-height:1.5;"></div>
+            </div>
+
+            <div class="conf-actions" style="margin-top:30px;">
+                <button class="btn-outline-conf" onclick="window.print()">Download / Print Receipt</button>
+                <button class="btn-primary-conf" id="conf-back-btn" onclick="window.location.reload()">Browse
+                    More</button>
+            </div>
+            <div id="conf-review-note" style="display:none;"></div>
+        </div>
+    </div>
+
+    <!-- PHOTO LIGHTBOX -->
+    <div id="photo-lightbox">
+        <button class="lb-close" onclick="closeLightbox()">&#10005;</button>
+        <button class="lb-nav" id="lb-prev" onclick="lbNav(-1)">&#8249;</button>
+        <div class="lb-img-wrap">
+            <img id="lb-main-img" src="" alt="Photo">
+        </div>
+        <button class="lb-nav" id="lb-next" onclick="lbNav(1)">&#8250;</button>
+        <div class="lb-counter" id="lb-counter"></div>
+        <div class="lb-thumbs" id="lb-thumbs"></div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://krjbpfjbbimqtnpjjkye.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_LYvO32XRAOV3f4Fk5RFEBQ_6L9QqNzN';
+        const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // ---- State ----
+        let product = null;
+        let slotTemplate = null;
+        let state = {
+            date: null,
+            time: null,
+            quantity: 1,
+            addons: [],
+            // Promo fields
+            promoCodeId: null,
+            promoCodeText: null,
+            promoRewardType: null,
+            promoDiscountValue: 0,
+            discountAmount: 0,
+            // Buy X Get Y fields
+            buyQuantity: 0,
+            freeQuantity: 0,
+            targetType: null,
+            targetProductId: null,
+            targetAddOnId: null,
+            // Referral fields
+            promoCategory: 'standard',
+            referrerName: null,
+            referrerType: null,
+            referrerRewardValue: 0,
+            // Birthday fields
+            isBirthdayPromo: false,
+            birthdayRule: null,
+            requiredCompanions: 0,
+            // Date Rules Engine
+            holidays: [],
+            priceOverrides: []
+        };
+
+        // ---- Parse product ID ----
+        const params = new URLSearchParams(window.location.search);
+        const productId = params.get('product');
+
+        if (!productId) {
+            showNotFound();
+        } else {
+            loadBookingPage(productId);
+        }
+
+        function showNotFound() {
+            document.getElementById('page-content').innerHTML = `
+                <div class="not-found">
+                    <div class="emoji">🎟️</div>
+                    <h1>Experience not found</h1>
+                    <p>This experience may have been removed or the link is incorrect.</p>
+                    <a href="index.html">Browse All Experiences</a>
+                </div>
+            `;
+        }
+
+        // ---- Load Product Data ----
+        async function loadBookingPage(prodId) {
+            const { data, error } = await db
+                .from('products')
+                .select('*, business_units(id, name), product_resource_rules(units_consumed, resources(capacity)), product_review_settings(*)')
+                .eq('id', prodId)
+                .single();
+
+            if (error || !data) {
+                console.error('Booking page load error:', error);
+                showNotFound();
+                return;
+            }
+
+            product = data;
+            slotTemplate = data.slot_templates; // legacy single template fallback
+
+            // Load ALL slot templates via junction table (new many-to-many)
+            const { data: junctionRows } = await db
+                .from('product_slot_templates')
+                .select('sort_order, slot_templates(*)')
+                .eq('product_id', prodId)
+                .order('sort_order', { ascending: true });
+
+            if (junctionRows && junctionRows.length > 0) {
+                product.sessionTemplates = junctionRows.map(r => r.slot_templates).filter(Boolean);
+                // Also set slotTemplate to first one for backwards-compat
+                slotTemplate = product.sessionTemplates[0];
+            } else {
+                // Fallback: if nothing in junction, use the old single slot_template_id
+                product.sessionTemplates = slotTemplate ? [slotTemplate] : [];
+            }
+
+            // Load addons linked to this product
+            const { data: addons } = await db
+                .from('addons')
+                .select('*, product_addons!inner(product_id)')
+                .eq('product_addons.product_id', prodId)
+                .eq('active', true)
+                .order('price', { ascending: true });
+
+            product.addons = addons || [];
+
+            // Load Holidays
+            if (product.business_unit_id) {
+                const [localRes, natRes] = await Promise.all([
+                    db.from('business_unit_holidays').select('*').eq('business_unit_id', product.business_unit_id),
+                    db.from('national_holidays').select('*')
+                ]);
+                const locals = (localRes.data || []).map(h => ({ ...h, scope: 'local' }));
+                const nats = (natRes.data || []).map(h => ({ ...h, scope: 'national' }));
+                state.holidays = [...locals, ...nats];
+            } else {
+                const { data: nats } = await db.from('national_holidays').select('*');
+                state.holidays = (nats || []).map(h => ({ ...h, scope: 'national' }));
+            }
+
+            // Load Price Overrides for this Product
+            const { data: po } = await db.from('product_price_overrides').select('*').eq('product_id', prodId).eq('is_active', true);
+            state.priceOverrides = po || [];
+
+            // Update page title
+            document.title = `${product.name} — Book Now | TNG Experiences`;
+
+            // Set back link
+            const backLink = document.getElementById('back-link');
+            if (product.business_units) {
+                backLink.href = `venue.html?id=${product.business_units.id}`;
+                backLink.textContent = `← ${product.business_units.name}`;
+            }
+
+            // Confirmation browse-more button
+            document.getElementById('conf-back-btn').onclick = () => {
+                if (product.business_units) {
+                    window.location.href = `venue.html?id=${product.business_units.id}`;
+                } else {
+                    window.location.href = 'index.html';
+                }
+            };
+
+            renderBookingPage();
+        }
+
+        // ---- Render Full Page ----
+        function renderBookingPage() {
+            const p = product;
+
+            // Social Proof Generation
+            let socialProofHtml = '';
+            const revSettings = (p.product_review_settings && p.product_review_settings.length > 0) ? p.product_review_settings[0] : {
+                show_reviews: true, show_rating_summary: true, show_review_count: true, show_booked_count: true,
+                rating_source: 'auto', review_count_source: 'auto', booked_count_source: 'auto'
+            };
+
+            if (revSettings.show_reviews) {
+                const parts = [];
+                const formatNum = n => n >= 1000000 ? (n / 1000000).toFixed(1).replace(/\.0$/, '') + 'M' : n >= 1000 ? (n / 1000).toFixed(1).replace(/\.0$/, '') + 'K' : n;
+
+                const rating = revSettings.rating_source === 'manual_override' && revSettings.displayed_rating !== null ? Number(revSettings.displayed_rating) : Number(p.actual_rating || 0);
+                const revCount = revSettings.review_count_source === 'manual_override' && revSettings.displayed_review_count !== null ? Number(revSettings.displayed_review_count) : Number(p.actual_review_count || 0);
+                const bkCount = revSettings.booked_count_source === 'manual_override' && revSettings.displayed_booked_count !== null ? Number(revSettings.displayed_booked_count) : Number(p.actual_booked_count || 0);
+
+                if (revSettings.show_rating_summary) {
+                    const full = Math.floor(rating);
+                    const half = rating - full >= 0.5 ? 1 : 0;
+                    const empty = Math.max(0, 5 - full - half);
+                    const starsHtml = `<span class="stars" style="color:#F59E0B;">${'★'.repeat(full)}${half ? '⯪' : ''}${'☆'.repeat(empty)}</span>`;
+                    parts.push(`${starsHtml} <span style="font-weight:500; margin-right:4px;">${rating.toFixed(1)}</span>`);
+                }
+
+                if (revSettings.show_review_count) {
+                    parts.push(`<span style="font-weight:500; text-decoration:underline;">${formatNum(revCount)} reviews</span>`);
+                }
+
+                if (revSettings.show_booked_count) {
+                    parts.push(`<span style="color:var(--text-light); font-weight:400;">${formatNum(bkCount)}+ booked</span>`);
+                }
+
+                if (parts.length > 0) {
+                    socialProofHtml = parts.join(' <span class="dot" style="margin:0 6px; color:#D1D5DB; font-size:12px;">•</span> ') + ' <span class="dot" style="margin:0 6px; color:#D1D5DB; font-size:12px;">•</span> ';
+                }
+            }
+            const venueName = p.business_units?.name || 'TNG Experiences';
+            const heroRatingHtml = `<div class="hero-rating" style="display:flex; align-items:center; flex-wrap:wrap; font-size:0.85rem; margin-top:8px;">
+                ${socialProofHtml}
+                <span style="color:var(--text-light); font-weight:400;">📍 ${venueName}</span>
+            </div>`;
+
+            // Badge
+            const badgeConfig = {
+                most_popular: { cls: 'popular', text: 'Most Popular' },
+                best_value: { cls: 'best-value', text: 'Best Value' },
+                limited: { cls: 'popular', text: 'Limited' },
+                new: { cls: 'best-value', text: 'New' },
+                recommended: { cls: 'best-value', text: 'Recommended' },
+            };
+            let badgeHtml = '';
+            if (p.badge_type && badgeConfig[p.badge_type]) {
+                const b = badgeConfig[p.badge_type];
+                badgeHtml = `<div class="hero-badge-overlay ${b.cls}">${b.text}</div>`;
+            }
+
+            // Image Gallery - Klook Style
+            let galleryHtml = '';
+            if (p.image_urls && p.image_urls.length > 0) {
+                if (p.image_urls.length >= 5) {
+                    // Mosaic layout
+                    galleryHtml = `
+                    <div class="klook-gallery mosaic">
+                        <div class="main-img-wrapper" onclick="openPhotoGallery(0)">
+                            ${badgeHtml}
+                            <img src="${p.image_urls[0]}" alt="${p.name}">
+                        </div>
+                        <div class="small-img-wrapper" onclick="openPhotoGallery(1)"><img src="${p.image_urls[1]}" alt="${p.name}"></div>
+                        <div class="small-img-wrapper" onclick="openPhotoGallery(2)"><img src="${p.image_urls[2]}" alt="${p.name}"></div>
+                        <div class="small-img-wrapper" onclick="openPhotoGallery(3)"><img src="${p.image_urls[3]}" alt="${p.name}"></div>
+                        <div class="small-img-wrapper" onclick="openPhotoGallery(4)">
+                            <img src="${p.image_urls[4]}" alt="${p.name}">
+                            <button class="gallery-btn">Gallery</button>
+                        </div>
+                    </div>`;
+                } else if (p.image_urls.length > 1) {
+                    // Split layout or simple fallback (rendered as single img for now if you want to keep code lean, but extending works too)
+                    galleryHtml = `
+                    <div class="klook-gallery single-img">
+                        <div class="main-img-wrapper">
+                            ${badgeHtml}
+                            <img src="${p.image_urls[0]}" alt="${p.name}">
+                        </div>
+                    </div>`;
+                } else {
+                    // Single image
+                    galleryHtml = `
+                    <div class="klook-gallery single-img">
+                        <div class="main-img-wrapper">
+                            ${badgeHtml}
+                            <img src="${p.image_urls[0]}" alt="${p.name}">
+                        </div>
+                    </div>`;
+                }
+            } else {
+                const emojis = { full_day: '🌊', fixed_slot: '⏰', hourly: '🕐', date_based: '📅' };
+                galleryHtml = `<div class="klook-gallery single-img"><div class="main-img-wrapper"><div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:4rem;background: linear-gradient(135deg, #667eea22, #764ba233);">${emojis[p.booking_type] || '🎯'}</div></div></div>`;
+            }
+
+            // Value props
+            let vpHtml = '';
+            if (p.value_props && p.value_props.length > 0) {
+                vpHtml = p.value_props.map(v => `<div class="vp-item">✔ ${v}</div>`).join('');
+            } else {
+                const auto = [];
+                if (p.booking_type === 'full_day') auto.push('Full day access');
+                if (p.booking_type === 'fixed_slot') auto.push('Fixed schedule');
+                if (slotTemplate) {
+                    const s = slotTemplate.start_time?.substring(0, 5);
+                    const e = slotTemplate.end_time?.substring(0, 5);
+                    if (s && e) auto.push(`${s} – ${e}`);
+                }
+                auto.push('Instant confirmation');
+                vpHtml = auto.map(v => `<div class="vp-item">✔ ${v}</div>`).join('');
+            }
+
+            // Duration
+            let durText = '';
+            if (p.duration_minutes) {
+                if (p.duration_minutes >= 60) {
+                    const h = Math.floor(p.duration_minutes / 60);
+                    const m = p.duration_minutes % 60;
+                    durText = m > 0 ? `${h}h ${m}m` : `${h} hour${h > 1 ? 's' : ''}`;
+                } else {
+                    durText = `${p.duration_minutes} min`;
+                }
+            }
+
+            // Time slot section — supports multiple session templates
+            let timeSlotSection = '';
+            const sessions = p.sessionTemplates || (slotTemplate ? [slotTemplate] : []);
+
+            if (sessions.length > 1) {
+                // Multiple sessions: show as selectable chips, one per session
+                const firstStart = sessions[0].start_time?.substring(0, 5) || '';
+                state.time = firstStart;
+                const chips = sessions.map((st, i) => {
+                    const start = st.start_time?.substring(0, 5) || '';
+                    const end = st.end_time?.substring(0, 5) || '';
+                    return `<div class="time-chip${i === 0 ? ' selected' : ''}" data-time="${start}" data-session-id="${st.id}">${st.name || start + ' – ' + end}<br><small style="font-size:0.75rem; opacity:0.75;">${start} – ${end}</small></div>`;
+                }).join('');
+                timeSlotSection = `
+                    <div>
+                        <label>Choose Session</label>
+                        <div class="time-slots-grid" id="time-slots">${chips}</div>
+                    </div>
+                `;
+            } else if (sessions.length === 1) {
+                const st = sessions[0];
+                const start = st.start_time?.substring(0, 5) || '';
+                const end = st.end_time?.substring(0, 5) || '';
+                state.time = start;
+
+                if (st.interval_minutes && st.interval_minutes > 0) {
+                    // Interval-based time chips (e.g. hourly)
+                    timeSlotSection = `
+                        <div>
+                            <label>Available Times</label>
+                            <div class="time-slots-grid" id="time-slots"></div>
+                        </div>
+                    `;
+                } else {
+                    // Single continuous session — just one chip
+                    timeSlotSection = `
+                        <div>
+                            <label>Session Time</label>
+                            <div class="time-slots-grid">
+                                <div class="time-chip selected" data-time="${start}">${start} – ${end}</div>
+                            </div>
+                        </div>
+                    `;
+                }
+            } else {
+                // No templates configured at all — show manual time options
+                timeSlotSection = `
+                    <div>
+                        <label>Preferred Time</label>
+                        <div class="time-slots-grid" id="time-slots">
+                            <div class="time-chip selected" data-time="08:00">08:00</div>
+                            <div class="time-chip" data-time="09:00">09:00</div>
+                            <div class="time-chip" data-time="10:00">10:00</div>
+                            <div class="time-chip" data-time="14:00">14:00</div>
+                            <div class="time-chip" data-time="15:00">15:00</div>
+                        </div>
+                    </div>
+                `;
+                state.time = '08:00';
+            }
+
+            // Price Calculation — Choose lowest possible price if not selected yet
+            let displayPrice = p.base_price || 0;
+            let isDateBased = p.pricing_mode === 'date_based';
+
+            if (isDateBased) {
+                const prices = [p.weekday_price, p.weekend_price, p.holiday_price].filter(v => v !== null && v !== undefined);
+                if (prices.length > 0) {
+                    displayPrice = Math.min(...prices);
+                }
+            }
+
+            const priceStr = displayPrice > 0 ? `₱${Number(displayPrice).toLocaleString()}` : 'Free';
+            const perUnit = p.booking_type === 'full_day' ? '/day' : '/person';
+            const priceLabel = isDateBased ? 'Starts at ' : '';
+
+            // Add-ons HTML
+            let addonsHtml = '';
+            if (p.addons && p.addons.length > 0) {
+                addonsHtml = p.addons.map(a => {
+                    const isSoldOut = a.max_stock != null && a.max_stock <= 0;
+                    const stockTag = a.max_stock == null
+                        ? `<span class="addon-stock-tag ok">✓ Available</span>`
+                        : a.max_stock <= 0
+                            ? `<span class="addon-stock-tag soldout">Sold Out</span>`
+                            : a.max_stock <= 3
+                                ? `<span class="addon-stock-tag low">🔥 Only ${a.max_stock} left</span>`
+                                : `<span class="addon-stock-tag ok">${a.max_stock} available</span>`;
+
+                    const imgHtml = a.image_url
+                        ? `<img class="addon-img" src="${a.image_url}" alt="${a.name}" loading="lazy">`
+                        : `<div class="addon-img-placeholder">🌟</div>`;
+
+                    return `
+                    <div class="addon-card ${isSoldOut ? 'sold-out' : ''}" data-id="${a.id}" data-price="${a.price}" data-name="${a.name}">
+                        <div class="addon-check">✓</div>
+                        ${imgHtml}
+                        <div class="addon-body">
+                            <h4>${a.name}</h4>
+                            ${a.description ? `<p>${a.description}</p>` : ''}
+                            <div class="addon-footer">
+                                <div class="addon-price">+₱${parseFloat(a.price).toLocaleString()}</div>
+                                ${stockTag}
+                            </div>
+                        </div>
+                    </div>`;
+                }).join('');
+            } else {
+                addonsHtml = '<p style="color:var(--text-light); font-size:0.9rem;">No add-ons available for this experience.</p>';
+            }
+
+            document.getElementById('page-content').innerHTML = `
+            <div class="product-header">
+                <div class="hero-breadcrumb">
+                    <a href="venue.html?id=${p.business_units?.id || ''}">${venueName}</a> / ${p.name}
+                </div>
+                <h1>${p.name}</h1>
+                ${heroRatingHtml}
+            </div>
+
+            ${galleryHtml}
+
+            <div class="booking-layout">
+                <!-- MAIN CONTENT -->
+                <div class="main-content">
+
+                    <!-- 1. DETAILS -->
+                    <section class="fade-in" style="margin-top: -10px;">
+                        <p class="hero-desc">${p.description || 'An unforgettable experience awaits. Book your spot now!'}</p>
+                        <div class="value-props" style="margin-bottom: 30px;">${vpHtml}</div>
+                        <div style="padding: 16px; background: rgba(var(--primary-rgb), 0.05); border-radius: 12px; font-size: 0.9rem; color: var(--text-secondary); box-shadow: inset 0 0 0 1px rgba(var(--primary-rgb), 0.2); margin-bottom: 24px;">
+                            <strong>Experience Duration:</strong> ${durText || 'Flexible'}
+                        </div>
+                    </section>
+
+                    <!-- 2. DATE & TIME -->
+                    <section class="fade-in" style="animation-delay:0.1s">
+                        <h2><span class="step-num">1</span> Select Date & Time</h2>
+                        <div class="date-grid">
+                            <div>
+                                <label for="booking-date">Choose Date</label>
+                                <input type="date" id="booking-date" required>
+                            </div>
+                            ${timeSlotSection}
+                        </div>
+                        <div class="urgency-msg" id="urgency-msg">🔥 High demand — limited availability on this date!</div>
+                    </section>
+
+                    <!-- 3. QUANTITY -->
+                    <section class="fade-in" style="animation-delay:0.15s">
+                        <h2><span class="step-num">2</span> Guests / Tickets</h2>
+                        <div class="qty-row">
+                            <div class="qty-label">
+                                <h4>Number of ${p.booking_type === 'full_day' ? 'Passes' : 'Guests'}</h4>
+                                <p id="qty-limit-text">Loading limit...</p>
+                            </div>
+                            <div class="qty-controls">
+                                <button class="qty-btn" id="qty-minus">−</button>
+                                <span class="qty-display" id="qty-display">1</span>
+                                <button class="qty-btn" id="qty-plus">+</button>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- 4. ADD-ONS -->
+                    <section class="fade-in" style="animation-delay:0.2s">
+                        <h2><span class="step-num">3</span> Enhance Your Experience</h2>
+                        <div class="addon-chips" id="addons-container">
+                            ${addonsHtml}
+                        </div>
+                    </section>
+
+                    <!-- 5. CUSTOMER DETAILS -->
+                    <section class="fade-in" style="animation-delay:0.25s">
+                        <h2><span class="step-num">4</span> Your Details</h2>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Full Name</label>
+                                <input type="text" id="cust-name" placeholder="John Doe" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Email Address</label>
+                                <input type="email" id="cust-email" placeholder="john@example.com" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Phone Number</label>
+                                <input type="tel" id="cust-phone" placeholder="+63 917 000 0000" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Special Requests <span style="font-size:0.75rem; color:var(--text-light);">(optional)</span></label>
+                                <input type="text" id="cust-notes" placeholder="Birthday setup, etc.">
+                            </div>
+                        </div>
+
+                        <!-- BIRTHDAY PROMO FIELDS (Hidden by default) -->
+                        <div id="bday-promo-section" style="display:none; margin-top:20px; background:#FFFBEB; border:1px solid #FCD34D; padding:20px; border-radius:12px;">
+                            <h3 style="color:#92400E; margin-bottom:10px; font-size:1.1rem; display:flex; align-items:center; gap:8px;">
+                                <span style="font-size:1.5rem;">🎁</span> Birthday Promo Applied
+                            </h3>
+                            <p style="font-size:0.85rem; color:#92400E; margin-bottom:15px; line-height:1.4;">Please provide the celebrant's exact details as they appear on their presented ID to validate this promo.</p>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label style="color:#92400E;">Celebrant Full Name (as per ID)</label>
+                                    <input type="text" id="bday-name" placeholder="Juan Dela Cruz">
+                                </div>
+                                <div class="form-group">
+                                    <label style="color:#92400E;">Birth Date</label>
+                                    <input type="date" id="bday-date">
+                                </div>
+                                <div class="form-group" style="grid-column: 1 / -1;">
+                                    <label style="color:#92400E;">ID Type to be Presented Onsite</label>
+                                    <select id="bday-id-type" style="padding:12px; border:1px solid #FDE68A; border-radius:8px; width:100%;">
+                                        <option value="Government ID">Government ID</option>
+                                        <option value="Birth Certificate">Birth Certificate</option>
+                                        <option value="Student ID">Student ID</option>
+                                        <option value="Company ID">Company ID</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div style="margin-top:15px; font-size:0.85rem; color:#92400E;">
+                                <label style="display:flex; align-items:start; gap:10px; cursor:pointer;">
+                                    <input type="checkbox" id="bday-ack" style="margin-top:3px;">
+                                    <span>I understand that the celebrant must present the original valid ID onsite. Misdeclaration or failure to present ID will forfeit the promo.</span>
+                                </label>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- SIDEBAR -->
+                <aside class="booking-sidebar">
+                    <div class="summary-card">
+                        <h3>Booking Summary</h3>
+                        <div class="summary-row">
+                            <span class="label">Experience</span>
+                            <span class="value" id="sum-product">${p.name}</span>
+                        </div>
+                        <div class="summary-row">
+                            <span class="label">Venue</span>
+                            <span class="value">${venueName}</span>
+                        </div>
+                        <div class="summary-row">
+                            <span class="label">Date</span>
+                            <span class="value" id="sum-date">Select a date</span>
+                        </div>
+                        <div class="summary-row">
+                            <span class="label">Time</span>
+                            <span class="value" id="sum-time">${state.time || '—'}</span>
+                        </div>
+                        <div class="summary-row">
+                            <span class="label">Guests</span>
+                            <span class="value" id="sum-qty">1</span>
+                        </div>
+                        <div class="summary-row" id="sum-rate-row" style="display:none;">
+                            <span class="label">Applied Rate</span>
+                            <span class="value" id="sum-rate-label">—</span>
+                        </div>
+                        <div class="summary-row">
+                            <span class="label">Unit Price</span>
+                            <span class="value" id="sum-unit-price">${priceStr}</span>
+                        </div>
+
+                        <div class="summary-divider"></div>
+
+                        <div class="price-breakdown">
+                            <div class="pb-row">
+                                <span><span id="pb-price-label">${priceLabel}</span><span id="pb-price-text">${priceStr}</span> × <span id="pb-qty">1</span> <span id="pb-unit-label">${p.booking_type === 'full_day' ? (state.quantity > 1 ? 'passes' : 'pass') : (state.quantity > 1 ? 'guests' : 'guest')}</span></span>
+                                <span id="pb-subtotal">${priceStr}</span>
+                            </div>
+                            <div id="pb-addons"></div>
+                        </div>
+
+                        <div class="summary-divider"></div>
+
+                        <!-- Promo Code UI -->
+                        <div class="promo-section" style="margin-bottom: 16px;">
+                            <div style="display:flex; gap:8px;">
+                                <input type="text" id="promo-code-input" placeholder="Promo Code" style="flex:1; padding:10px; border:1px solid var(--border); border-radius:8px; font-size:0.9rem; text-transform:uppercase;">
+                                <button type="button" id="apply-promo-btn" style="padding:10px 16px; background:var(--primary); color:white; border:none; border-radius:8px; font-weight:600; cursor:pointer;">Apply</button>
+                            </div>
+                            <div id="promo-msg" style="font-size:0.8rem; margin-top:6px; font-weight:500;"></div>
+                        </div>
+
+                        <div id="pb-promo"></div>
+
+                        <div class="summary-total">
+                            <span>Total</span>
+                            <span id="sum-total">₱${displayPrice.toLocaleString()}</span>
+                        </div>
+
+                        <button class="book-btn" id="book-btn">Book Now & Pay Securely</button>
+                        <p class="secure-text">🔒 Payments processed securely by Xendit</p>
+                        <div class="error-banner" id="error-banner"></div>
+                    </div>
+                </aside>
+            </div>
+            `;
+
+            // Initialize interactions
+            initInteractions();
+        }
+
+        // ---- Initialize all interactivity ----
+        function initInteractions() {
+            const p = product;
+            const price = p.base_price || 0;
+
+            // Date picker — Flatpickr with visual indicators
+            const dateInput = document.getElementById('booking-date');
+            if (dateInput) {
+                flatpickr(dateInput, {
+                    minDate: "today",
+                    dateFormat: "Y-m-d",
+                    disableMobile: "true",
+                    onDayCreate: (dObj, dStr, fp, dayElem) => {
+                        const date = dayElem.dateObj;
+                        const dateString = date.toISOString().split('T')[0];
+                        const day = date.getDay();
+
+                        // Highlight Weekends
+                        if (day === 0 || day === 6) {
+                            dayElem.classList.add("is-weekend");
+                        }
+
+                        // Highlight Holidays
+                        const holiday = state.holidays.find(h => h.holiday_date === dateString);
+                        if (holiday) {
+                            dayElem.classList.add("has-highlight", "is-holiday");
+                            dayElem.title = holiday.scope === 'national' ? "National Holiday Rate Applied" : "Local Holiday Rate Applied";
+                        }
+
+                        // Highlight Overrides
+                        const isOverride = state.priceOverrides.some(o => o.date === dateString && o.is_active);
+                        if (isOverride) {
+                            dayElem.classList.add("has-highlight", "is-override");
+                            dayElem.title = "Special Custom Rate Applied";
+                        }
+                    },
+                    onChange: (selectedDates, dateStr) => {
+                        state.date = dateStr;
+                        // Show urgency randomly
+                        if (Math.random() > 0.4) {
+                            const urgency = document.getElementById('urgency-msg');
+                            if (urgency) urgency.classList.add('visible');
+                        }
+                        updateSummary();
+                    }
+                });
+            }
+
+            // Time slot generation if interval-based
+            if (slotTemplate && slotTemplate.interval_minutes > 0) {
+                generateTimeSlots();
+            }
+
+            // Time chip clicks
+            document.querySelectorAll('#time-slots .time-chip[data-time]').forEach(chip => {
+                chip.addEventListener('click', () => {
+                    if (chip.classList.contains('disabled')) return;
+                    document.querySelectorAll('#time-slots .time-chip').forEach(c => c.classList.remove('selected'));
+                    chip.classList.add('selected');
+                    state.time = chip.dataset.time;
+                    updateSummary();
+                });
+            });
+
+            // Gallery dots
+            if (p.image_urls && p.image_urls.length > 1) {
+                document.querySelectorAll('.gallery-dot').forEach(dot => {
+                    dot.addEventListener('click', () => {
+                        const idx = parseInt(dot.dataset.idx);
+                        document.getElementById('hero-img').src = p.image_urls[idx];
+                        document.querySelectorAll('.gallery-dot').forEach(d => d.classList.remove('active'));
+                        dot.classList.add('active');
+                    });
+                });
+            }
+
+            // Promo Code listener
+            const promoBtn = document.getElementById('apply-promo-btn');
+            if (promoBtn) {
+                promoBtn.addEventListener('click', handleApplyPromo);
+            }
+
+            // Quantity logic based on rules
+            let maxQty = p.product_capacity || 100;
+
+            // If it uses shared resources, calculate the maximum possible available 
+            // from the resource rules instead of being strictly locked to product_capacity=1
+            if (p.resource_rule_type !== 'independent' && p.product_resource_rules && p.product_resource_rules.length > 0) {
+                let calculatedMax = Infinity;
+                p.product_resource_rules.forEach(rule => {
+                    if (rule.resources && rule.resources.capacity) {
+                        const units = rule.units_consumed || 1;
+                        const limit = Math.floor(rule.resources.capacity / units);
+                        if (limit < calculatedMax) calculatedMax = limit;
+                    }
+                });
+                if (calculatedMax !== Infinity) {
+                    // Let the resource dictates max cart limit
+                    // But if product_capacity is specifically small (like 1 for a private group pass), respect it if they strictly want to limit cart size. 
+                    // However, users often leave product_capacity=1 by mistake when setting up shared pools, so we prioritize the pool if product_capacity <= 1.
+                    if (p.product_capacity <= 1 || !p.product_capacity) {
+                        maxQty = calculatedMax;
+                    } else {
+                        maxQty = Math.min(p.product_capacity, calculatedMax);
+                    }
+                }
+            }
+
+            // Update UI text for limit
+            const limitTextEl = document.getElementById('qty-limit-text');
+            if (limitTextEl) {
+                limitTextEl.textContent = `Max ${maxQty} per booking`;
+            }
+            document.getElementById('qty-minus').addEventListener('click', () => {
+                if (state.quantity > 1) {
+                    state.quantity--;
+                    document.getElementById('qty-display').textContent = state.quantity;
+                    updateSummary();
+                }
+            });
+            document.getElementById('qty-plus').addEventListener('click', () => {
+                if (state.quantity < maxQty) {
+                    state.quantity++;
+                    document.getElementById('qty-display').textContent = state.quantity;
+                    updateSummary();
+                }
+            });
+
+            // Book button
+            document.getElementById('book-btn').addEventListener('click', handleBooking);
+
+            // Add-ons toggling
+            document.querySelectorAll('.addon-card').forEach(card => {
+                card.addEventListener('click', () => {
+                    const id = card.dataset.id;
+                    const price = parseFloat(card.dataset.price);
+                    const name = card.dataset.name;
+
+                    const existingIdx = state.addons.findIndex(a => a.id === id);
+                    if (existingIdx >= 0) {
+                        state.addons.splice(existingIdx, 1);
+                        card.classList.remove('selected');
+                    } else {
+                        state.addons.push({ id, price, name, quantity: 1 });
+                        card.classList.add('selected');
+                    }
+                    updateSummary();
+                });
+            });
+
+            updateSummary();
+        }
+
+        function openPhotoGallery(index) {
+            const imgs = product.image_urls || [];
+            if (!imgs.length) return;
+            const lb = document.getElementById('photo-lightbox');
+            lb._images = imgs;
+            lb._current = index;
+            // Build thumbnails
+            const thumbsEl = document.getElementById('lb-thumbs');
+            thumbsEl.innerHTML = imgs.map((src, i) =>
+                `<img class="lb-thumb ${i === index ? 'active' : ''}" src="${src}" data-idx="${i}" onclick="lbGoTo(${i})">`
+            ).join('');
+            lbGoTo(index);
+            lb.classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeLightbox() {
+            document.getElementById('photo-lightbox').classList.remove('open');
+            document.body.style.overflow = '';
+        }
+
+        function lbNav(dir) {
+            const lb = document.getElementById('photo-lightbox');
+            const next = (lb._current + dir + lb._images.length) % lb._images.length;
+            lbGoTo(next);
+        }
+
+        function lbGoTo(idx) {
+            const lb = document.getElementById('photo-lightbox');
+            lb._current = idx;
+            document.getElementById('lb-main-img').src = lb._images[idx];
+            document.getElementById('lb-counter').textContent = `${idx + 1} / ${lb._images.length}`;
+            document.querySelectorAll('.lb-thumb').forEach((t, i) => t.classList.toggle('active', i === idx));
+        }
+
+        // Close lightbox on background click
+        document.getElementById('photo-lightbox').addEventListener('click', function (e) {
+            if (e.target === this) closeLightbox();
+        });
+
+        // Keyboard nav
+        document.addEventListener('keydown', (e) => {
+            const lb = document.getElementById('photo-lightbox');
+            if (!lb.classList.contains('open')) return;
+            if (e.key === 'ArrowRight') lbNav(1);
+            if (e.key === 'ArrowLeft') lbNav(-1);
+            if (e.key === 'Escape') closeLightbox();
+        });
+
+        // ---- Generate interval time slots ----
+        function generateTimeSlots() {
+            const container = document.getElementById('time-slots');
+            if (!container || !slotTemplate) return;
+
+            const start = slotTemplate.start_time.substring(0, 5);
+            const end = slotTemplate.end_time.substring(0, 5);
+            const interval = slotTemplate.interval_minutes;
+
+            const [sh, sm] = start.split(':').map(Number);
+            const [eh, em] = end.split(':').map(Number);
+            const startMin = sh * 60 + sm;
+            const endMin = eh * 60 + em;
+
+            container.innerHTML = '';
+            let first = true;
+            for (let m = startMin; m < endMin; m += interval) {
+                const hh = String(Math.floor(m / 60)).padStart(2, '0');
+                const mm = String(m % 60).padStart(2, '0');
+                const timeStr = `${hh}:${mm}`;
+                const chip = document.createElement('div');
+                chip.className = `time-chip${first ? ' selected' : ''}`;
+                chip.dataset.time = timeStr;
+                chip.textContent = timeStr;
+                chip.addEventListener('click', () => {
+                    if (chip.classList.contains('disabled')) return;
+                    container.querySelectorAll('.time-chip').forEach(c => c.classList.remove('selected'));
+                    chip.classList.add('selected');
+                    state.time = timeStr;
+                    updateSummary();
+                });
+                container.appendChild(chip);
+                if (first) { state.time = timeStr; first = false; }
+            }
+        }
+
+        // ---- Update Summary ----
+        function updateSummary() {
+            let currentPrice = product.base_price || 0;
+            const isDateBased = product.pricing_mode === 'date_based';
+            let activeRateLabel = '';
+
+            if (isDateBased && state.date) {
+                const dateStr = state.date; // YYYY-MM-DD
+
+                // 1. Custom Override (Highest Priority)
+                const override = state.priceOverrides.find(o => o.date === dateStr);
+
+                if (override) {
+                    currentPrice = override.override_price;
+                    activeRateLabel = override.label || 'Special Rate';
+                } else {
+                    // 2. Check Local Holiday
+                    const localHoliday = state.holidays.find(h => h.holiday_date === dateStr && h.scope === 'local');
+                    if (localHoliday) {
+                        currentPrice = product.holiday_price !== null ? product.holiday_price : (product.weekend_price || product.base_price);
+                        activeRateLabel = 'Local Holiday Rate';
+                    } else {
+                        // 3. Check National Holiday
+                        const natHoliday = state.holidays.find(h => h.holiday_date === dateStr && h.scope === 'national');
+                        if (natHoliday) {
+                            currentPrice = product.holiday_price !== null ? product.holiday_price : (product.weekend_price || product.base_price);
+                            activeRateLabel = 'National Holiday Rate';
+                        } else {
+                            // 4. Weekend (Sat-Sun)
+                            const d = new Date(dateStr + 'T00:00');
+                            const day = d.getDay(); // 0=Sun, 6=Sat
+                            const isWeekend = (day === 0 || day === 6);
+
+                            if (isWeekend) {
+                                currentPrice = product.weekend_price !== null ? product.weekend_price : product.base_price;
+                                activeRateLabel = 'Weekend Rate';
+                            } else {
+                                // 5. Weekday
+                                currentPrice = product.weekday_price !== null ? product.weekday_price : product.base_price;
+                                activeRateLabel = 'Weekday Rate';
+                            }
+                        }
+                    }
+                }
+            } else if (isDateBased) {
+                // Not selected yet, show lowest
+                const prices = [product.weekday_price, product.weekend_price, product.holiday_price].filter(v => v !== null && v !== undefined);
+                if (prices.length > 0) {
+                    currentPrice = Math.min(...prices);
+                }
+            }
+
+            const subtotal = currentPrice * state.quantity;
+            const priceLabel = (isDateBased && state.date) ? `${activeRateLabel}: ` : (isDateBased ? 'Starts at ' : '');
+            const priceText = `₱${currentPrice.toLocaleString()}`;
+
+            let addonsTotal = 0;
+            let addonsHtml = '';
+
+            if (state.addons.length > 0) {
+                state.addons.forEach(a => {
+                    addonsTotal += a.price;
+                    addonsHtml += `
+                        <div class="pb-row" style="margin-top: 4px; color: var(--text-light); font-size: 0.85rem;">
+                            <span>+ ${a.name}</span>
+                            <span>₱${a.price.toLocaleString()}</span>
+                        </div>
+                    `;
+                });
+            }
+
+            let currentTotal = subtotal + addonsTotal;
+            let pbPromoHtml = '';
+
+            if (state.promoCodeText && state.promoRewardType) {
+                let dAmt = 0;
+                let eligible = true;
+
+                // Validate Buy X Get Y Eligibility
+                if (state.promoRewardType === 'buy_x_get_y') {
+                    if (state.targetType === 'ticket' || state.targetType === 'time_extension') {
+                        if (state.quantity < state.buyQuantity) eligible = false;
+                    } else if (state.targetType === 'add_on') {
+                        let targetAddonCount = state.addons.length;
+                        if (state.targetAddOnId) {
+                            targetAddonCount = state.addons.filter(a => a.id === state.targetAddOnId).length;
+                        }
+                        if (targetAddonCount < state.buyQuantity) eligible = false;
+                    }
+                }
+
+                if (eligible) {
+                    if (state.promoRewardType === 'fixed_discount') {
+                        dAmt = Math.min(state.promoDiscountValue, currentTotal);
+                    } else if (state.promoRewardType === 'percentage_discount') {
+                        dAmt = currentTotal * (state.promoDiscountValue / 100);
+                    }
+
+                    state.discountAmount = dAmt;
+                    currentTotal = Math.max(0, currentTotal - dAmt);
+
+                    if (state.promoRewardType === 'buy_x_get_y') {
+                        let promoLabel = '';
+                        if (state.targetType === 'ticket') {
+                            promoLabel = `+ ${state.freeQuantity} Free Ticket(s)`;
+                        } else if (state.targetType === 'time_extension') {
+                            promoLabel = `+ ${state.freeQuantity} Extra Hour(s)`;
+                        } else if (state.targetType === 'add_on') {
+                            promoLabel = `+ ${state.freeQuantity} Free Add-on(s)`;
+                        }
+
+                        pbPromoHtml = `
+                            <div class="pb-row" style="margin-top: 8px; margin-bottom: 8px; color: #10B981; font-size: 0.9rem; font-weight:500;">
+                                <span>✔️ Promo (${state.promoCodeText})</span>
+                                <span>${promoLabel}</span>
+                            </div>
+                        `;
+                    } else {
+                        pbPromoHtml = `
+                            <div class="pb-row" style="margin-top: 8px; margin-bottom: 8px; color: #10B981; font-size: 0.9rem; font-weight:500;">
+                                <span>✔️ Promo (${state.promoCodeText})</span>
+                                <span>-₱${dAmt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            </div>
+                        `;
+                    }
+                } else {
+                    pbPromoHtml = `
+                        <div class="pb-row" style="margin-top: 8px; margin-bottom: 8px; color: #E53E3E; font-size: 0.85rem;">
+                            <span>⚠️ Promo (${state.promoCodeText})</span>
+                            <span>Not eligible (Needs ${state.buyQuantity} items)</span>
+                        </div>
+                    `;
+                    state.discountAmount = 0;
+                }
+            } else {
+                state.discountAmount = 0;
+            }
+
+            const total = currentTotal;
+
+            const dateEl = document.getElementById('sum-date');
+            if (state.date) {
+                dateEl.textContent = new Date(state.date + 'T00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+            } else {
+                dateEl.textContent = 'Select a date';
+            }
+
+            // Update Unit Price and Rate Label in Sidebar
+            document.getElementById('sum-unit-price').textContent = priceText;
+            const rateRow = document.getElementById('sum-rate-row');
+            if (rateRow) {
+                if (isDateBased && state.date) {
+                    rateRow.style.display = 'flex';
+                    document.getElementById('sum-rate-label').textContent = activeRateLabel || 'Standard Rate';
+                } else {
+                    rateRow.style.display = 'none';
+                }
+            }
+
+            document.getElementById('sum-time').textContent = state.time || '—';
+            document.getElementById('sum-qty').textContent = state.quantity;
+            document.getElementById('pb-qty').textContent = state.quantity;
+            document.getElementById('pb-price-label').textContent = priceLabel;
+            document.getElementById('pb-price-text').textContent = priceText;
+            document.getElementById('pb-unit-label').textContent = product.booking_type === 'full_day' ? (state.quantity > 1 ? 'passes' : 'pass') : (state.quantity > 1 ? 'guests' : 'guest');
+            document.getElementById('pb-subtotal').textContent = `₱${subtotal.toLocaleString()}`;
+
+            document.getElementById('pb-addons').innerHTML = addonsHtml;
+
+            const pbPromoEl = document.getElementById('pb-promo');
+            if (pbPromoEl) pbPromoEl.innerHTML = pbPromoHtml;
+
+            document.getElementById('sum-total').textContent = `₱${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        }
+
+        // ---- Handle Promo Apply ----
+        async function handleApplyPromo() {
+            const input = document.getElementById('promo-code-input');
+            const msgEl = document.getElementById('promo-msg');
+            const btn = document.getElementById('apply-promo-btn');
+            const code = (input.value || '').trim().toUpperCase();
+
+            if (!code) {
+                msgEl.style.color = '#E53E3E';
+                msgEl.textContent = 'Please enter a code.';
+                // Reset state
+                state.promoCodeId = null;
+                state.promoCodeText = null;
+                state.promoRewardType = null;
+                state.promoDiscountValue = 0;
+                state.buyQuantity = 0;
+                state.freeQuantity = 0;
+                state.targetType = null;
+                state.targetProductId = null;
+                state.targetAddOnId = null;
+                state.promoCategory = 'standard';
+                state.referrerName = null;
+                state.referrerType = null;
+                state.referrerRewardValue = 0;
+                state.isBirthdayPromo = false;
+                state.birthdayRule = null;
+                state.requiredCompanions = 0;
+                const bdaySec = document.getElementById('bday-promo-section');
+                if (bdaySec) bdaySec.style.display = 'none';
+                updateSummary();
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = '...';
+            msgEl.textContent = 'Checking...';
+            msgEl.style.color = 'var(--text-light)';
+
+            const { data, error } = await db.from('promo_codes')
+                .select('*')
+                .eq('code', code)
+                .single();
+
+            btn.disabled = false;
+            btn.textContent = 'Apply';
+
+            if (error || !data || !data.active) {
+                msgEl.style.color = '#E53E3E';
+                msgEl.textContent = 'Invalid or expired promo code.';
+                state.promoCodeId = null;
+                state.promoCodeText = null;
+                state.promoRewardType = null;
+                state.promoDiscountValue = 0;
+                state.buyQuantity = 0;
+                state.freeQuantity = 0;
+                state.targetType = null;
+                state.targetProductId = null;
+                state.targetAddOnId = null;
+                state.promoCategory = 'standard';
+                state.referrerName = null;
+                state.referrerType = null;
+                state.referrerRewardValue = 0;
+                state.isBirthdayPromo = false;
+                state.birthdayRule = null;
+                state.requiredCompanions = 0;
+                document.getElementById('bday-promo-section').style.display = 'none';
+                updateSummary();
+                return;
+            }
+
+            // Valid code
+            const rType = data.promo_reward_type;
+            if (rType !== 'fixed_discount' && rType !== 'percentage_discount' && rType !== 'buy_x_get_y') {
+                msgEl.style.color = '#E53E3E';
+                msgEl.textContent = 'This promo type is not yet supported in Phase 1/2 checkout.';
+                return;
+            }
+
+            state.promoCodeId = data.id;
+            state.promoCodeText = data.code;
+            state.promoRewardType = rType;
+            state.promoDiscountValue = Number(data.discount_value);
+            state.buyQuantity = Number(data.buy_quantity);
+            state.freeQuantity = Number(data.free_quantity);
+            state.targetType = data.target_type;
+            state.targetProductId = data.target_product_id;
+            state.targetAddOnId = data.target_add_on_id;
+
+            // Referral mapping
+            state.promoCategory = data.promo_category || 'standard';
+            state.referrerName = data.referrer_name;
+            state.referrerType = data.referrer_type;
+            state.referrerRewardValue = Number(data.referrer_reward_value || 0);
+
+            // Birthday mapping
+            state.isBirthdayPromo = !!data.is_birthday_promo;
+            state.birthdayRule = data.birthday_promo_rule || null;
+            state.requiredCompanions = Number(data.requires_companions || 0);
+
+            if (state.isBirthdayPromo) {
+                document.getElementById('bday-promo-section').style.display = 'block';
+            } else {
+                document.getElementById('bday-promo-section').style.display = 'none';
+            }
+
+            msgEl.style.color = '#10B981';
+            if (rType === 'percentage_discount') {
+                msgEl.textContent = `${data.discount_value}% discount applied!`;
+            } else if (rType === 'fixed_discount') {
+                msgEl.textContent = `₱${data.discount_value} discount applied!`;
+            } else {
+                msgEl.textContent = `Buy ${data.buy_quantity} Get ${data.free_quantity} Free applied!`;
+            }
+
+            updateSummary();
+        }
+
+        // ---- Handle Booking ----
+        async function handleBooking() {
+            const btn = document.getElementById('book-btn');
+            const errorBanner = document.getElementById('error-banner');
+            errorBanner.classList.remove('visible');
+
+            // Validate
+            const name = document.getElementById('cust-name').value.trim();
+            const email = document.getElementById('cust-email').value.trim();
+            const phone = document.getElementById('cust-phone').value.trim();
+
+            if (!state.date) {
+                showError('Please select a date.');
+                return;
+            }
+            if (!name || !email || !phone) {
+                showError('Please fill in your name, email, and phone number.');
+                return;
+            }
+
+            if (state.isBirthdayPromo) {
+                const bName = document.getElementById('bday-name').value.trim();
+                const bDate = document.getElementById('bday-date').value;
+                const bAck = document.getElementById('bday-ack').checked;
+
+                if (!bName || !bDate) {
+                    showError('Please provide the Birthday Celebrant Name and Birth Date for the promo.');
+                    return;
+                }
+                if (!bAck) {
+                    showError('Please acknowledge the Birthday Promo ID requirement.');
+                    return;
+                }
+
+                // Validate companions
+                // state.quantity is total guests. Celebrant = 1. So Companions = state.quantity - 1.
+                if (state.quantity - 1 < state.requiredCompanions) {
+                    showError(`This birthday promo requires at least ${state.requiredCompanions} paying companion(s). Please adjust your guest count.`);
+                    return;
+                }
+            }
+
+            btn.textContent = 'Processing...';
+            btn.disabled = true;
+
+            try {
+                const p = product;
+                const price = p.base_price || 0;
+
+                // Calculate times
+                const startAt = new Date(`${state.date}T${state.time || '08:00'}:00`);
+                let duration = p.duration_minutes || 60;
+
+                // If promo is time_extension and eligible, add the duration
+                if (state.promoRewardType === 'buy_x_get_y' && state.targetType === 'time_extension') {
+                    if (state.quantity >= state.buyQuantity) {
+                        duration += (state.freeQuantity * 60); // assuming free_quantity is evaluated in hours
+                    }
+                }
+
+                const endAt = new Date(startAt.getTime() + duration * 60 * 1000);
+
+                const bookingRef = `TNG-${new Date().getFullYear()}-${Math.floor(Math.random() * 90000) + 10000}`;
+
+                // If promo is ticket, calculate granted tickets seamlessly
+                let finalQuantity = state.quantity;
+                if (state.promoRewardType === 'buy_x_get_y' && state.targetType === 'ticket') {
+                    if (state.quantity >= state.buyQuantity) {
+                        finalQuantity += state.freeQuantity;
+                    }
+                }
+
+                const payload = {
+                    business_unit_id: p.business_unit_id,
+                    product_id: p.id,
+                    customer_name: name,
+                    customer_email: email,
+                    customer_phone: phone,
+                    booking_date: state.date,
+                    booking_time: state.time || '08:00',
+                    start_at: startAt.toISOString(),
+                    end_at: endAt.toISOString(),
+                    status: 'pending',
+                    payment_status: 'unpaid',
+                    quantity: finalQuantity,
+                    total_amount: Math.max(0, (price * state.quantity) + state.addons.reduce((sum, a) => sum + a.price, 0) - (state.discountAmount || 0)),
+                    promo_code_id: state.promoCodeId,
+                    promo_code_text: state.promoCodeText,
+                    discount_amount: state.discountAmount || 0,
+                    booking_reference: bookingRef
+                };
+
+                const notes = document.getElementById('cust-notes')?.value?.trim();
+                if (notes) payload.notes = notes;
+
+                if (state.isBirthdayPromo) {
+                    payload.celebrant_name = document.getElementById('bday-name').value.trim();
+                    payload.celebrant_birth_date = document.getElementById('bday-date').value;
+                    payload.presented_id_type = document.getElementById('bday-id-type').value;
+                    payload.birthday_verification_status = 'pending';
+                }
+
+                const { data, error } = await db.from('bookings').insert([payload]).select().single();
+
+                if (error) throw error;
+
+                const bookingId = data.id;
+
+                // Insert Add-ons if any
+                if (state.addons.length > 0 || (state.promoRewardType === 'buy_x_get_y' && state.targetType === 'add_on')) {
+                    const addonPayloads = [...state.addons].map(a => ({
+                        booking_id: bookingId,
+                        addon_id: a.id,
+                        addon_name: a.name,
+                        quantity: 1,
+                        price_at_booking: a.price
+                    }));
+
+                    // Add free add-on if applicable
+                    if (state.promoRewardType === 'buy_x_get_y' && state.targetType === 'add_on') {
+                        let eligible = false;
+                        let targetAddonCount = state.addons.length;
+                        if (state.targetAddOnId) {
+                            targetAddonCount = state.addons.filter(a => a.id === state.targetAddOnId).length;
+                        }
+                        if (targetAddonCount >= state.buyQuantity) eligible = true;
+
+                        if (eligible) {
+                            addonPayloads.push({
+                                booking_id: bookingId,
+                                addon_id: state.targetAddOnId || null,
+                                addon_name: 'Free Promo Add-on',
+                                quantity: state.freeQuantity,
+                                price_at_booking: 0
+                            });
+                        }
+                    }
+
+                    if (addonPayloads.length > 0) {
+                        await db.from('booking_addons').insert(addonPayloads);
+                    }
+                }
+
+                // Handle Promos - Step 3: Insert referral mapping
+                if (state.promoCategory && state.promoCategory !== 'standard') {
+                    const referralPayload = {
+                        promo_code_id: state.promoCodeId,
+                        booking_id: bookingId,
+                        referrer_name: state.referrerName,
+                        referrer_type: state.referrerType,
+                        reward_value: state.referrerRewardValue
+                    };
+                    await db.from('promo_referrals').insert([referralPayload]);
+                }
+
+                // Show confirmation
+                setTimeout(() => {
+                    showConfirmation(bookingRef, payload.total_amount, bookingId);
+                    btn.textContent = 'Book Now & Pay Securely';
+                    btn.disabled = false;
+                }, 1200);
+
+            } catch (err) {
+                console.error('Booking error:', err);
+                showError('Something went wrong. Please try again.');
+                btn.textContent = 'Book Now & Pay Securely';
+                btn.disabled = false;
+            }
+        }
+
+        function showError(msg) {
+            const banner = document.getElementById('error-banner');
+            banner.textContent = msg;
+            banner.classList.add('visible');
+            banner.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        function showConfirmation(ref, totalAmount, bId) {
+            const p = product;
+
+            document.getElementById('conf-ref').textContent = ref;
+            document.getElementById('conf-product').textContent = p.name;
+            document.getElementById('conf-date').textContent = new Date(state.date + 'T00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+            document.getElementById('conf-time').textContent = state.time || '—';
+            document.getElementById('conf-qty').textContent = state.quantity;
+            document.getElementById('conf-total').textContent = `₱${totalAmount.toLocaleString()}`;
+
+            if (p.confirmation_message) {
+                let msg = p.confirmation_message
+                    .replace(/\{\{customer_name\}\}/gi, document.getElementById('cust-name').value || '')
+                    .replace(/\{\{booking_number\}\}/gi, ref)
+                    .replace(/\{\{booked_date\}\}/gi, document.getElementById('conf-date').textContent)
+                    .replace(/\{\{time_slot\}\}/gi, document.getElementById('conf-time').textContent)
+                    .replace(/\{\{product_name\}\}/gi, p.name)
+                    .replace(/\{\{number_of_guests\}\}/gi, state.quantity)
+                    .replace(/\{\{business_unit\}\}/gi, p.business_units?.name || 'TNG')
+                    .replace(/\{\{venue_address\}\}/gi, p.business_units?.location || '');
+                document.getElementById('conf-msg-content').innerHTML = msg;
+                document.getElementById('conf-msg-wrapper').style.display = 'block';
+            }
+
+            if (p.terms_and_conditions) {
+                document.getElementById('conf-terms-content').innerHTML = p.terms_and_conditions;
+                document.getElementById('conf-terms-wrapper').style.display = 'block';
+            }
+
+            // Main QR
+            document.getElementById('conf-main-qr').innerHTML = '';
+            new QRCode(document.getElementById('conf-main-qr'), {
+                text: JSON.stringify({ type: 'main', ref: ref, id: bId }),
+                width: 120, height: 120, colorDark: "#1A1A2E", colorLight: "#ffffff"
+            });
+
+            // Add-on QRs
+            const addonQrContainer = document.getElementById('conf-addon-qrs');
+            addonQrContainer.innerHTML = '';
+
+            // We fetch the newly inserted booking_addons to ensure promos/freebies are included
+            db.from('booking_addons').select('*').eq('booking_id', bId).then(({ data }) => {
+                if (data && data.length > 0) {
+                    data.forEach(addon => {
+                        const wrap = document.createElement('div');
+                        wrap.style.textAlign = 'center';
+                        wrap.style.padding = '15px';
+                        wrap.style.background = '#FEE2E210';
+                        wrap.style.borderRadius = '12px';
+                        wrap.style.border = '1px solid #FECACA';
+
+                        const qrDiv = document.createElement('div');
+                        qrDiv.style.marginBottom = '12px';
+                        qrDiv.style.display = 'inline-block';
+                        new QRCode(qrDiv, {
+                            text: JSON.stringify({ type: 'addon', ref: ref, id: addon.id }),
+                            width: 100, height: 100, colorDark: "#7F1D1D", colorLight: "#ffffff"
+                        });
+
+                        const title = document.createElement('div');
+                        title.style.fontWeight = '700';
+                        title.style.fontSize = '0.85rem';
+                        title.style.color = '#7F1D1D';
+                        title.textContent = addon.addon_name;
+
+                        const qty = document.createElement('div');
+                        qty.style.fontSize = '0.7rem';
+                        qty.style.color = '#B91C1C';
+                        qty.style.marginTop = '4px';
+                        qty.textContent = 'QTY: ' + addon.quantity;
+
+                        wrap.appendChild(qrDiv);
+                        wrap.appendChild(title);
+                        wrap.appendChild(qty);
+                        addonQrContainer.appendChild(wrap);
+                    });
+                }
+            });
+
+            // Inject review note — only after visit date passes will the link be eligible
+            const reviewNote = document.getElementById('conf-review-note');
+            if (reviewNote && bId) {
+                reviewNote.innerHTML = `
+                    <div style="margin-top:16px; padding:12px 16px; background:#FFFBEB; border-radius:10px; border:1px solid #FDE68A; font-size:0.82rem; color:#92400E; text-align:center;">
+                        👍 After your visit, <a href="review.html?booking=${bId}" style="color:#D97706; font-weight:700; text-decoration:underline;">leave a review</a> to share your experience!
+                    </div>`;
+                reviewNote.style.display = 'block';
+            }
+
+            document.getElementById('confirmation-overlay').classList.add('visible');
+        }
+    </script>
+
+</body>
+
+</html>

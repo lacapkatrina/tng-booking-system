@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Now | TNG Experiences</title>
+    <meta name="description"
+        content="Browse and book experiences at this venue. Instant confirmation, secure payments.">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --primary: #FF5A5F;
+            --primary-hover: #E0484D;
+            --primary-soft: #FFF1F2;
+            --text-main: #1A1A2E;
+            --text-secondary: #6B7280;
+            --text-light: #9CA3AF;
+            --bg: #F8F9FB;
+            --card-bg: #FFFFFF;
+            --border: #E5E7EB;
+            --border-light: #F3F4F6;
+            --success: #059669;
+            --success-soft: #ECFDF5;
+            --warning: #F59E0B;
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
+            --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+            --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.12);
+            --shadow-hover: 0 12px 40px rgba(0, 0, 0, 0.15);
+            --radius: 16px;
+            --radius-sm: 10px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            color: var(--text-main);
+            background: var(--bg);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ===================== HEADER ===================== */
+        .site-header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            padding: 0 24px;
+        }
+
+        .header-inner {
+            max-width: 1280px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 64px;
+        }
+
+        .logo a {
+            font-weight: 800;
+            font-size: 1.4rem;
+            background: linear-gradient(135deg, var(--primary), #FF8A5C);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-decoration: none;
+            letter-spacing: -0.5px;
+        }
+
+        .header-nav {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .header-nav a {
+            text-decoration: none;
+            color: var(--text-secondary);
+            font-weight: 500;
+            font-size: 0.9rem;
+            padding: 8px 16px;
+            border-radius: 99px;
+            transition: all 0.2s;
+        }
+
+        .header-nav a:hover {
+            background: var(--border-light);
+            color: var(--text-main);
+        }
+
+        .header-nav .back-link {
+            border: 1px solid var(--border);
+        }
+
+        /* ===================== VENUE HERO ===================== */
+        .venue-hero {
+            position: relative;
+            overflow: hidden;
+            min-height: 340px;
+            display: flex;
+            align-items: flex-end;
+        }
+
+        .venue-hero-bg {
+            position: absolute;
+            inset: 0;
+            z-index: 0;
+        }
+
+        .venue-hero-bg .gradient-bg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .venue-hero-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.1) 60%, rgba(0, 0, 0, 0.3) 100%);
+            z-index: 1;
+        }
+
+        .venue-hero-content {
+            position: relative;
+            z-index: 2;
+            max-width: 1280px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 40px 24px 36px;
+        }
+
+        .venue-breadcrumb {
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 12px;
+        }
+
+        .venue-breadcrumb a {
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+        }
+
+        .venue-breadcrumb a:hover {
+            color: white;
+        }
+
+        .venue-hero-content h1 {
+            font-size: clamp(2rem, 5vw, 3rem);
+            font-weight: 900;
+            color: white;
+            letter-spacing: -1px;
+            line-height: 1.1;
+            margin-bottom: 12px;
+        }
+
+        .venue-tagline {
+            font-size: 1.1rem;
+            color: rgba(255, 255, 255, 0.85);
+            max-width: 600px;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .venue-meta {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .venue-meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.88rem;
+            color: rgba(255, 255, 255, 0.9);
+            font-weight: 500;
+            background: rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(8px);
+            padding: 6px 14px;
+            border-radius: 99px;
+        }
+
+        /* Dynamic gradient backgrounds per venue */
+        .gradient-inflatable {
+            background: linear-gradient(135deg, #0077B6, #00B4D8, #48CAE4);
+        }
+
+        .gradient-dessert {
+            background: linear-gradient(135deg, #E91E8C, #FF6FB7, #FFB6D9);
+        }
+
+        .gradient-gootopia {
+            background: linear-gradient(135deg, #7C3AED, #A78BFA, #C4B5FD);
+        }
+
+        .gradient-bakebe {
+            background: linear-gradient(135deg, #D97706, #FBBF24, #FDE68A);
+        }
+
+        .gradient-funroof {
+            background: linear-gradient(135deg, #059669, #34D399, #6EE7B7);
+        }
+
+        .gradient-default {
+            background: linear-gradient(135deg, #1A1A2E, #16213E, #0F3460);
+        }
+
+        /* ===================== SHARE BAR ===================== */
+        .share-bar {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .share-url {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 8px 16px;
+            flex: 1;
+            max-width: 600px;
+        }
+
+        .share-url input {
+            border: none;
+            outline: none;
+            font-size: 0.85rem;
+            font-family: inherit;
+            color: var(--text-secondary);
+            flex: 1;
+            min-width: 0;
+        }
+
+        .share-url .copy-btn {
+            background: var(--text-main);
+            color: white;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: background 0.2s;
+        }
+
+        .share-url .copy-btn:hover {
+            background: #333;
+        }
+
+        .product-count-badge {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        /* ===================== PRODUCTS GRID ===================== */
+        .products-section {
+            max-width: 1280px;
+            margin: 16px auto 60px;
+            padding: 0 24px;
+        }
+
+        .section-label {
+            font-size: 1.3rem;
+            font-weight: 800;
+            margin-bottom: 20px;
+            letter-spacing: -0.3px;
+        }
+
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 24px;
+        }
+
+        @media (max-width: 720px) {
+            .products-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* ===================== PRODUCT CARD ===================== */
+        .product-card {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            overflow: hidden;
+            border: 1px solid var(--border);
+            transition: all 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            cursor: pointer;
+            position: relative;
+        }
+
+        .product-card:hover {
+            transform: translateY(-6px);
+            box-shadow: var(--shadow-hover);
+            border-color: transparent;
+        }
+
+        .card-image {
+            width: 100%;
+            height: 220px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s ease;
+        }
+
+        .product-card:hover .card-image img {
+            transform: scale(1.08);
+        }
+
+        .card-image .placeholder-img {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            background: linear-gradient(135deg, #667eea22, #764ba233);
+        }
+
+        .card-badge {
+            position: absolute;
+            top: 14px;
+            left: 14px;
+            padding: 5px 12px;
+            border-radius: 99px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            z-index: 2;
+        }
+
+        .card-badge.popular {
+            background: var(--primary);
+            color: white;
+        }
+
+        .card-badge.best-value {
+            background: var(--success);
+            color: white;
+        }
+
+        .card-gallery-count {
+            position: absolute;
+            bottom: 12px;
+            right: 12px;
+            background: rgba(0, 0, 0, 0.65);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .card-body {
+            padding: 20px;
+        }
+
+        .card-meta {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .card-meta .tag {
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            background: var(--border-light);
+            color: var(--text-secondary);
+        }
+
+        .card-meta .duration {
+            font-size: 0.8rem;
+            color: var(--text-light);
+            font-weight: 500;
+        }
+
+        .card-body h3 {
+            font-size: 1.15rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            line-height: 1.35;
+            letter-spacing: -0.3px;
+        }
+
+        .card-body .desc {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            line-height: 1.55;
+            margin-bottom: 16px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .card-value-props {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 16px;
+        }
+
+        .card-value-props .vp {
+            font-size: 0.78rem;
+            color: var(--success);
+            font-weight: 600;
+            background: var(--success-soft);
+            padding: 3px 10px;
+            border-radius: 6px;
+        }
+
+        .card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            padding-top: 16px;
+            border-top: 1px solid var(--border-light);
+        }
+
+        .card-price .from {
+            font-size: 0.75rem;
+            color: var(--text-light);
+            font-weight: 500;
+        }
+
+        .card-price .amount {
+            font-size: 1.4rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+
+        .card-price .per {
+            font-size: 0.78rem;
+            color: var(--text-light);
+        }
+
+        .pricing-help {
+            font-size: 0.65rem;
+            color: var(--text-light);
+            font-weight: 500;
+            margin-top: 2px;
+            font-style: italic;
+        }
+
+        .card-cta {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 22px;
+            border-radius: 99px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .card-cta:hover {
+            background: var(--primary-hover);
+            transform: scale(1.03);
+        }
+
+        /* ===================== TRUST BAR ===================== */
+        .trust-bar {
+            background: white;
+            border-top: 1px solid var(--border);
+            padding: 40px 24px;
+        }
+
+        .trust-inner {
+            max-width: 1280px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: center;
+            gap: 48px;
+            flex-wrap: wrap;
+        }
+
+        .trust-item {
+            text-align: center;
+        }
+
+        .trust-item .icon {
+            font-size: 1.6rem;
+            margin-bottom: 6px;
+        }
+
+        .trust-item .text {
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .site-footer {
+            text-align: center;
+            padding: 24px;
+            font-size: 0.8rem;
+            color: var(--text-light);
+        }
+
+        /* Skeleton */
+        .skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+            border-radius: var(--radius);
+        }
+
+        @keyframes shimmer {
+            0% {
+                background-position: 200% 0;
+            }
+
+            100% {
+                background-position: -200% 0;
+            }
+        }
+
+        .skeleton-card {
+            height: 420px;
+        }
+
+        .skeleton-hero {
+            width: 100%;
+            height: 340px;
+            border-radius: 0;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            grid-column: 1 / -1;
+        }
+
+        .empty-state .emoji {
+            font-size: 3rem;
+            margin-bottom: 16px;
+        }
+
+        .empty-state h3 {
+            font-size: 1.3rem;
+            margin-bottom: 8px;
+        }
+
+        .empty-state p {
+            color: var(--text-secondary);
+        }
+
+        .fade-in {
+            animation: fadeInUp 0.5s ease forwards;
+            opacity: 0;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* 404 state */
+        .not-found {
+            text-align: center;
+            padding: 120px 24px;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .not-found .emoji {
+            font-size: 4rem;
+            margin-bottom: 20px;
+        }
+
+        .not-found h1 {
+            font-size: 1.8rem;
+            margin-bottom: 12px;
+        }
+
+        .not-found p {
+            color: var(--text-secondary);
+            margin-bottom: 24px;
+            line-height: 1.6;
+        }
+
+        .not-found a {
+            display: inline-block;
+            background: var(--primary);
+            color: white;
+            padding: 12px 28px;
+            border-radius: 99px;
+            text-decoration: none;
+            font-weight: 700;
+            transition: background 0.2s;
+        }
+
+        .not-found a:hover {
+            background: var(--primary-hover);
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- HEADER -->
+    <header class="site-header">
+        <div class="header-inner">
+            <div class="logo"><a href="index.html">TNG Experiences</a></div>
+            <nav class="header-nav">
+                <a href="index.html" class="back-link">← All Venues</a>
+                <a href="#">Help</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT (dynamically populated) -->
+    <div id="page-content">
+        <!-- Skeleton while loading -->
+        <div class="skeleton skeleton-hero"></div>
+        <div class="products-section" style="margin-top:24px;">
+            <div class="products-grid">
+                <div class="skeleton skeleton-card"></div>
+                <div class="skeleton skeleton-card"></div>
+                <div class="skeleton skeleton-card"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TRUST BAR -->
+    <div class="trust-bar">
+        <div class="trust-inner">
+            <div class="trust-item">
+                <div class="icon">🔒</div>
+                <div class="text">Secure Payments via Xendit</div>
+            </div>
+            <div class="trust-item">
+                <div class="icon">⚡</div>
+                <div class="text">Instant Booking Confirmation</div>
+            </div>
+            <div class="trust-item">
+                <div class="icon">📱</div>
+                <div class="text">Mobile e-Ticket</div>
+            </div>
+            <div class="trust-item">
+                <div class="icon">🎯</div>
+                <div class="text">Best Price Guarantee</div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        &copy; 2026 TNG Experiences — The Next Experience Group. All rights reserved.
+    </footer>
+
+    <script>
+        const SUPABASE_URL = 'https://krjbpfjbbimqtnpjjkye.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_LYvO32XRAOV3f4Fk5RFEBQ_6L9QqNzN';
+        const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // ---- Gradient map for venues ----
+        const venueGradients = {
+            'inflatable': 'gradient-inflatable',
+            'dessert': 'gradient-dessert',
+            'gootopia': 'gradient-gootopia',
+            'bakebe': 'gradient-bakebe',
+            'fun roof': 'gradient-funroof',
+        };
+
+        function getGradientClass(name) {
+            const lower = (name || '').toLowerCase();
+            for (const [key, cls] of Object.entries(venueGradients)) {
+                if (lower.includes(key)) return cls;
+            }
+            return 'gradient-default';
+        }
+
+        // ---- Venue taglines ----
+        const venueTaglines = {
+            'inflatable island': 'The Philippines\' biggest floating playground — splash, bounce, and slide under the sun!',
+            'the dessert museum': 'Walk through immersive dessert-themed rooms. Taste, play, and capture sweet memories.',
+            'gootopia smoa': 'Get gloriously messy in the slimiest, most colorful experience in Manila!',
+            'gootopia smne': 'Slime, goo, and pure fun — the ultimate sensory adventure in SM North EDSA.',
+            'bakebe sm aura': 'Bake your own gourmet treats with pro-level equipment and recipes. No experience needed!',
+            'bakebe smaison': 'A hands-on baking studio where anyone can become a pastry chef for a day.',
+            'the fun roof': 'A vibrant rooftop hangout with games, food, and the best sunset views in the metro.',
+        };
+
+        function getTagline(name) {
+            return venueTaglines[(name || '').toLowerCase()] || 'Discover amazing experiences and book your next adventure.';
+        }
+
+        // ---- Parse venue ID from URL ----
+        const params = new URLSearchParams(window.location.search);
+        const venueId = params.get('id');
+
+        if (!venueId) {
+            showNotFound();
+        } else {
+            loadVenuePage(venueId);
+        }
+
+        function showNotFound() {
+            document.getElementById('page-content').innerHTML = `
+                <div class="not-found">
+                    <div class="emoji">🔍</div>
+                    <h1>Venue not found</h1>
+                    <p>The venue you're looking for doesn't exist or the link may be incorrect. Browse all available venues below.</p>
+                    <a href="index.html">Browse All Venues</a>
+                </div>
+            `;
+        }
+
+        async function loadVenuePage(buId) {
+            // 1. Load the business unit
+            const { data: bu, error: buError } = await db
+                .from('business_units')
+                .select('*')
+                .eq('id', buId)
+                .single();
+
+            if (buError || !bu) {
+                showNotFound();
+                return;
+            }
+
+            // Update page title
+            document.title = `${bu.name} — Book Now | TNG Experiences`;
+            document.querySelector('meta[name="description"]').content = getTagline(bu.name);
+
+            // 2. Load products
+            const { data: products, error: prodError } = await db
+                .from('products')
+                .select('*, product_review_settings(*)')
+                .eq('business_unit_id', buId)
+                .eq('active', true)
+                .order('base_price', { ascending: false });
+
+            if (prodError) console.error('Products load error:', prodError);
+
+            const productList = products || [];
+
+            const gradientClass = getGradientClass(bu.name);
+            const tagline = getTagline(bu.name);
+
+            // 3. Render the full page
+            const content = document.getElementById('page-content');
+            content.innerHTML = `
+                <!-- VENUE HERO -->
+                <section class="venue-hero">
+                    <div class="venue-hero-bg">
+                        <div class="gradient-bg ${gradientClass}"></div>
+                    </div>
+                    <div class="venue-hero-overlay"></div>
+                    <div class="venue-hero-content fade-in">
+                        <div class="venue-breadcrumb">
+                            <a href="index.html">All Venues</a> / ${bu.name}
+                        </div>
+                        <h1>${bu.name}</h1>
+                        <p class="venue-tagline">${tagline}</p>
+                        <div class="venue-meta">
+                            <span class="venue-meta-item">🎟 ${productList.length} experience${productList.length !== 1 ? 's' : ''}</span>
+                            <span class="venue-meta-item">⚡ Instant confirmation</span>
+                            <span class="venue-meta-item">📱 Mobile e-ticket</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- SHARE BAR -->
+                <div class="share-bar">
+                    <div class="share-url">
+                        <span style="font-size:0.85rem;">🔗</span>
+                        <input type="text" id="share-link" readonly value="${window.location.href}">
+                        <button class="copy-btn" onclick="copyLink()">Copy Link</button>
+                    </div>
+                    <span class="product-count-badge">${productList.length} experience${productList.length !== 1 ? 's' : ''} available</span>
+                </div>
+
+                <!-- PRODUCTS -->
+                <section class="products-section">
+                    <h2 class="section-label">Choose your experience</h2>
+                    <div class="products-grid" id="products-grid"></div>
+                </section>
+            `;
+
+            // 4. Render product cards
+            const grid = document.getElementById('products-grid');
+
+            if (productList.length === 0) {
+                grid.innerHTML = `
+                    <div class="empty-state">
+                        <div class="emoji">🎈</div>
+                        <h3>No experiences yet</h3>
+                        <p>This venue hasn't added any bookable products yet. Check back soon!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            productList.forEach((p, idx) => {
+                const card = document.createElement('div');
+                card.className = 'product-card fade-in';
+                card.style.animationDelay = `${idx * 0.1}s`;
+
+                // Image
+                let imageHtml = '';
+                if (p.image_urls && p.image_urls.length > 0) {
+                    imageHtml = `<img src="${p.image_urls[0]}" alt="${p.name}" loading="lazy">`;
+                    if (p.image_urls.length > 1) {
+                        imageHtml += `<div class="card-gallery-count">📷 ${p.image_urls.length} photos</div>`;
+                    }
+                } else {
+                    const emojis = { 'full_day': '🌊', 'fixed_slot': '⏰', 'hourly': '🕐', 'date_based': '📅' };
+                    const emoji = emojis[p.booking_type] || '🎯';
+                    imageHtml = `<div class="placeholder-img">${emoji}</div>`;
+                }
+
+                // Badge — from database
+                let badgeHtml = '';
+                const badgeConfig = {
+                    most_popular: { cls: 'popular', text: 'Most Popular' },
+                    best_value: { cls: 'best-value', text: 'Best Value' },
+                    limited: { cls: 'popular', text: 'Limited' },
+                    new: { cls: 'best-value', text: 'New' },
+                    recommended: { cls: 'best-value', text: 'Recommended' },
+                };
+                if (p.badge_type && badgeConfig[p.badge_type]) {
+                    const b = badgeConfig[p.badge_type];
+                    badgeHtml = `<div class="card-badge ${b.cls}">${b.text}</div>`;
+                }
+
+                // Duration
+                let durationText = '';
+                if (p.duration_minutes) {
+                    if (p.duration_minutes >= 60) {
+                        const hrs = Math.floor(p.duration_minutes / 60);
+                        const mins = p.duration_minutes % 60;
+                        durationText = mins > 0 ? `${hrs}h ${mins}m` : `${hrs} hour${hrs > 1 ? 's' : ''}`;
+                    } else {
+                        durationText = `${p.duration_minutes} min`;
+                    }
+                }
+
+                // Slot template time window
+                let timeInfo = '';
+                if (p.slot_templates) {
+                    const st = p.slot_templates;
+                    const start = st.start_time ? st.start_time.substring(0, 5) : '';
+                    const end = st.end_time ? st.end_time.substring(0, 5) : '';
+                    if (start && end) timeInfo = `${start} – ${end}`;
+                }
+
+                // Value props — DB-driven with fallback
+                let valueProps = [];
+                if (p.value_props && p.value_props.length > 0) {
+                    valueProps = p.value_props.map(v => `✔ ${v}`);
+                } else {
+                    if (p.booking_type === 'full_day') valueProps.push('✔ Full day access');
+                    if (p.booking_type === 'fixed_slot') valueProps.push('✔ Fixed schedule');
+                    if (timeInfo) valueProps.push(`✔ ${timeInfo}`);
+                    if (p.product_capacity && p.product_capacity > 1) valueProps.push(`✔ Up to ${p.product_capacity} guests`);
+                    if (valueProps.length === 0) valueProps.push('✔ Instant confirmation');
+                }
+                const vpHtml = valueProps.slice(0, 4).map(v => `<span class="vp">${v}</span>`).join('');
+
+                // Price Calculation — Choose lowest possible price
+                let displayPrice = p.base_price || 0;
+                let isDateBased = p.pricing_mode === 'date_based';
+
+                if (isDateBased) {
+                    const prices = [p.weekday_price, p.weekend_price, p.holiday_price].filter(v => v !== null && v !== undefined);
+                    if (prices.length > 0) {
+                        displayPrice = Math.min(...prices);
+                    }
+                }
+
+                const priceStr = displayPrice > 0 ? `₱${Number(displayPrice).toLocaleString()}` : 'Free';
+                const perUnit = p.booking_type === 'full_day' ? '/day' : '/person';
+
+                // Helper text for date-based pricing
+                const pricingHelpText = isDateBased ? '<div class="pricing-help">Final price shown after date selection</div>' : '';
+
+                // Social Proof rendering
+                let socialProofHtml = '';
+                const revSettings = (p.product_review_settings && p.product_review_settings.length > 0) ? p.product_review_settings[0] : {
+                    show_reviews: true, show_rating_summary: true, show_review_count: true, show_booked_count: true,
+                    rating_source: 'auto', review_count_source: 'auto', booked_count_source: 'auto'
+                };
+
+                if (revSettings.show_reviews) {
+                    const parts = [];
+                    const formatNum = n => n >= 1000000 ? (n / 1000000).toFixed(1).replace(/\.0$/, '') + 'M' : n >= 1000 ? (n / 1000).toFixed(1).replace(/\.0$/, '') + 'K' : n;
+
+                    const rating = revSettings.rating_source === 'manual_override' && revSettings.displayed_rating !== null ? Number(revSettings.displayed_rating) : Number(p.actual_rating || 0);
+                    const revCount = revSettings.review_count_source === 'manual_override' && revSettings.displayed_review_count !== null ? Number(revSettings.displayed_review_count) : Number(p.actual_review_count || 0);
+                    const bkCount = revSettings.booked_count_source === 'manual_override' && revSettings.displayed_booked_count !== null ? Number(revSettings.displayed_booked_count) : Number(p.actual_booked_count || 0);
+
+                    if (revSettings.show_rating_summary) {
+                        const full = Math.floor(rating);
+                        const half = rating - full >= 0.5 ? 1 : 0;
+                        const empty = Math.max(0, 5 - full - half);
+                        const starsHtml = `<span style="color:#F59E0B; margin-right:4px;">${'★'.repeat(full)}${half ? '⯪' : ''}${'☆'.repeat(empty)}</span>`;
+                        parts.push(`<span>${starsHtml}<strong style="color:var(--text-color);">${rating.toFixed(1)}</strong></span>`);
+                    }
+                    if (revSettings.show_review_count) {
+                        parts.push(`<span style="color:var(--text-light); text-decoration:underline;">${formatNum(revCount)} reviews</span>`);
+                    }
+                    if (revSettings.show_booked_count) {
+                        parts.push(`<span style="color:var(--text-light);">${formatNum(bkCount)}+ booked</span>`);
+                    }
+
+                    if (parts.length > 0) {
+                        socialProofHtml = `<div class="card-social-proof" style="display:flex; align-items:center; gap:6px; font-size:0.8rem; margin:-4px 0 8px;">
+                            ${parts.join('<span style="color:#D1D5DB; font-size:10px;">•</span>')}
+                        </div>`;
+                    }
+                }
+
+                card.innerHTML = `
+                    <div class="card-image">
+                        ${badgeHtml}
+                        ${imageHtml}
+                    </div>
+                    <div class="card-body">
+                        <div class="card-meta">
+                            <span class="tag">${(p.booking_type || 'experience').replace('_', ' ')}</span>
+                            ${durationText ? `<span class="duration">⏱ ${durationText}</span>` : ''}
+                        </div>
+                        <h3>${p.name}</h3>
+                        ${socialProofHtml}
+                        <p class="desc">${p.short_tagline || p.description || 'An unforgettable experience awaits. Book your spot now!'}</p>
+                        <div class="card-value-props">${vpHtml}</div>
+                        <div class="card-footer">
+                            <div class="card-price">
+                                <div class="from">Starts at</div>
+                                <span class="amount">${priceStr}</span>
+                                <span class="per">${perUnit}</span>
+                                ${pricingHelpText}
+                            </div>
+                            <button class="card-cta" onclick="goToBooking('${p.id}')">Book Now →</button>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        // ---- Copy Link ----
+        function copyLink() {
+            const input = document.getElementById('share-link');
+            input.select();
+            navigator.clipboard.writeText(input.value).then(() => {
+                const btn = document.querySelector('.copy-btn');
+                btn.textContent = '✓ Copied!';
+                setTimeout(() => { btn.textContent = 'Copy Link'; }, 2000);
+            });
+        }
+
+        // ---- Navigate ----
+        function goToBooking(productId) {
+            window.location.href = `booking.html?product=${productId}`;
+        }
+    </script>
+</body>
+
+</html>
