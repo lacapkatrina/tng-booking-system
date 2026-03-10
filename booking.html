@@ -638,44 +638,60 @@
         }
 
         /* ========== FLATPICKR CUSTOM STYLES ========== */
-        .flatpickr-day.has-highlight {
-            position: relative;
+        .flatpickr-calendar {
+            box-shadow: none !important;
+            border: 1px solid var(--border) !important;
+            border-radius: 12px !important;
+            width: 100% !important;
+            max-width: 100%;
+            padding: 10px;
         }
 
-        .flatpickr-day.has-highlight::after {
-            content: '';
-            position: absolute;
-            bottom: 4px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 4px;
-            height: 4px;
-            border-radius: 50%;
+        .flatpickr-innerContainer,
+        .flatpickr-rContainer,
+        .flatpickr-days,
+        .dayContainer {
+            width: 100% !important;
+            min-width: 100% !important;
+            max-width: 100% !important;
         }
 
-        .flatpickr-day.is-holiday::after {
-            background: #F59E0B;
-            /* Holiday Orange */
+        .flatpickr-day {
+            height: 56px !important;
+            line-height: normal !important;
+            display: flex !important;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px !important;
+            font-weight: 600;
+            max-width: none !important;
+            border: none !important;
+            margin-top: 2px !important;
         }
 
-        .flatpickr-day.is-override::after {
-            background: #10B981;
-            /* Override Green */
+        .fp-price {
+            font-size: 0.65rem;
+            color: var(--text-light);
+            font-weight: 500;
+            margin-top: 3px;
+        }
+
+        .flatpickr-day.selected .fp-price {
+            color: rgba(255, 255, 255, 0.9);
         }
 
         .flatpickr-day.is-weekend {
             color: #EF4444;
         }
 
-        .flatpickr-calendar {
-            box-shadow: var(--shadow-lg) !important;
-            border: 1px solid var(--border) !important;
-            border-radius: 12px !important;
+        .flatpickr-day.selected {
+            background: var(--text-main) !important;
+            color: white !important;
         }
 
-        .flatpickr-day.selected {
-            background: var(--primary) !important;
-            border-color: var(--primary) !important;
+        .flatpickr-day:hover:not(.selected) {
+            background: var(--border-light) !important;
         }
 
         .secure-text {
@@ -1677,10 +1693,10 @@
                     <!-- 2. DATE & TIME -->
                     <section class="fade-in" style="animation-delay:0.1s">
                         <h2><span class="step-num">1</span> Select Date & Time</h2>
-                        <div class="date-grid">
+                        <div class="date-grid" style="grid-template-columns: 1fr;">
                             <div>
-                                <label for="booking-date">Choose Date</label>
-                                <input type="date" id="booking-date" required>
+                                <label style="display:none;" for="booking-date">Choose Date</label>
+                                <input class="flatpickr-input" type="text" id="booking-date" placeholder="Select visit date..." readonly="readonly" style="display:none;">
                             </div>
                             ${timeSlotSection}
                         </div>
@@ -1846,35 +1862,39 @@
             const p = product;
             const price = p.base_price || 0;
 
-            // Date picker — Flatpickr with visual indicators
+            // Date picker — Flatpickr inline with visual indicators & prices
             const dateInput = document.getElementById('booking-date');
             if (dateInput) {
                 flatpickr(dateInput, {
+                    inline: true,
                     minDate: "today",
                     dateFormat: "Y-m-d",
                     disableMobile: "true",
                     onDayCreate: (dObj, dStr, fp, dayElem) => {
-                        const date = dayElem.dateObj;
-                        const dateString = date.toISOString().split('T')[0];
-                        const day = date.getDay();
+                        if (!dayElem.dateObj) return;
+
+                        // Parse local date strictly without timezone offset shifting backwards
+                        const dateObj = dayElem.dateObj;
+                        const localDate = new Date(dateObj.getTime() - (dateObj.getTimezoneOffset() * 60000));
+                        const dateString = localDate.toISOString().split('T')[0];
+                        const day = dateObj.getDay();
 
                         // Highlight Weekends
                         if (day === 0 || day === 6) {
                             dayElem.classList.add("is-weekend");
                         }
 
-                        // Highlight Holidays
-                        const holiday = state.holidays.find(h => h.holiday_date === dateString);
-                        if (holiday) {
-                            dayElem.classList.add("has-highlight", "is-holiday");
-                            dayElem.title = holiday.scope === 'national' ? "National Holiday Rate Applied" : "Local Holiday Rate Applied";
-                        }
-
-                        // Highlight Overrides
-                        const isOverride = state.priceOverrides.some(o => o.date === dateString && o.is_active);
-                        if (isOverride) {
-                            dayElem.classList.add("has-highlight", "is-override");
-                            dayElem.title = "Special Custom Rate Applied";
+                        // Check if past or disabled before adding price
+                        if (!dayElem.classList.contains("flatpickr-disabled")) {
+                            if (p.pricing_mode === 'date_based') {
+                                const priceInfo = getPriceForDate(dateString);
+                                if (priceInfo.price !== null && priceInfo.price > 0) {
+                                    const priceSpan = document.createElement('span');
+                                    priceSpan.className = 'fp-price';
+                                    priceSpan.innerHTML = priceInfo.price.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+                                    dayElem.appendChild(priceSpan);
+                                }
+                            }
                         }
                     },
                     onChange: (selectedDates, dateStr) => {
@@ -2079,6 +2099,48 @@
             }
         }
 
+        function getPriceForDate(dateStr) {
+            let currentPrice = product.base_price || 0;
+            let activeRateLabel = '';
+
+            // 1. Custom Override (Highest Priority)
+            const override = state.priceOverrides.find(o => o.date === dateStr);
+            if (override) {
+                currentPrice = override.override_price;
+                activeRateLabel = override.label || 'Special Rate';
+            } else {
+                // 2. Check Local Holiday
+                const localHoliday = state.holidays.find(h => h.holiday_date === dateStr && h.scope === 'local');
+                if (localHoliday) {
+                    currentPrice = product.holiday_price !== null ? product.holiday_price : (product.weekend_price || product.base_price);
+                    activeRateLabel = 'Local Holiday Rate';
+                } else {
+                    // 3. Check National Holiday
+                    const natHoliday = state.holidays.find(h => h.holiday_date === dateStr && h.scope === 'national');
+                    if (natHoliday) {
+                        currentPrice = product.holiday_price !== null ? product.holiday_price : (product.weekend_price || product.base_price);
+                        activeRateLabel = 'National Holiday Rate';
+                    } else {
+                        // 4. Weekend (Sat-Sun)
+                        const d = new Date(dateStr + 'T00:00');
+                        const day = d.getDay(); // 0=Sun, 6=Sat
+                        const isWeekend = (day === 0 || day === 6);
+
+                        if (isWeekend) {
+                            currentPrice = product.weekend_price !== null ? product.weekend_price : product.base_price;
+                            activeRateLabel = 'Weekend Rate';
+                        } else {
+                            // 5. Weekday
+                            currentPrice = product.weekday_price !== null ? product.weekday_price : product.base_price;
+                            activeRateLabel = 'Weekday Rate';
+                        }
+                    }
+                }
+            }
+
+            return { price: currentPrice, label: activeRateLabel };
+        }
+
         // ---- Update Summary ----
         function updateSummary() {
             let currentPrice = product.base_price || 0;
@@ -2086,43 +2148,9 @@
             let activeRateLabel = '';
 
             if (isDateBased && state.date) {
-                const dateStr = state.date; // YYYY-MM-DD
-
-                // 1. Custom Override (Highest Priority)
-                const override = state.priceOverrides.find(o => o.date === dateStr);
-
-                if (override) {
-                    currentPrice = override.override_price;
-                    activeRateLabel = override.label || 'Special Rate';
-                } else {
-                    // 2. Check Local Holiday
-                    const localHoliday = state.holidays.find(h => h.holiday_date === dateStr && h.scope === 'local');
-                    if (localHoliday) {
-                        currentPrice = product.holiday_price !== null ? product.holiday_price : (product.weekend_price || product.base_price);
-                        activeRateLabel = 'Local Holiday Rate';
-                    } else {
-                        // 3. Check National Holiday
-                        const natHoliday = state.holidays.find(h => h.holiday_date === dateStr && h.scope === 'national');
-                        if (natHoliday) {
-                            currentPrice = product.holiday_price !== null ? product.holiday_price : (product.weekend_price || product.base_price);
-                            activeRateLabel = 'National Holiday Rate';
-                        } else {
-                            // 4. Weekend (Sat-Sun)
-                            const d = new Date(dateStr + 'T00:00');
-                            const day = d.getDay(); // 0=Sun, 6=Sat
-                            const isWeekend = (day === 0 || day === 6);
-
-                            if (isWeekend) {
-                                currentPrice = product.weekend_price !== null ? product.weekend_price : product.base_price;
-                                activeRateLabel = 'Weekend Rate';
-                            } else {
-                                // 5. Weekday
-                                currentPrice = product.weekday_price !== null ? product.weekday_price : product.base_price;
-                                activeRateLabel = 'Weekday Rate';
-                            }
-                        }
-                    }
-                }
+                const priceInfo = getPriceForDate(state.date);
+                currentPrice = priceInfo.price;
+                activeRateLabel = priceInfo.label;
             } else if (isDateBased) {
                 // Not selected yet, show lowest
                 const prices = [product.weekday_price, product.weekend_price, product.holiday_price].filter(v => v !== null && v !== undefined);
