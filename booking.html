@@ -1190,9 +1190,9 @@
         <div
             style="background:#fff; border-radius:12px; width:450px; max-width:95%; padding:30px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,0.3);">
             <div style="font-size:30px; margin-bottom:15px;">🔒</div>
-            <h2 style="font-size:1.4rem; color:#1e293b; margin-bottom:10px;">Secure Payment Processing</h2>
-            <p style="color:#64748b; font-size:0.95rem; margin-bottom:25px;">You are about to pay <strong>₱<span
-                        id="payment-total-amount"></span></strong> via our secure simulated gateway.</p>
+            <h2 style="font-size:1.4rem; color:#1e293b; margin-bottom:10px;">Secure Payment</h2>
+            <p style="color:#64748b; font-size:0.95rem; margin-bottom:25px;">You are about to be redirected to Xendit to
+                pay <strong>₱<span id="payment-total-amount"></span></strong>.</p>
 
             <div
                 style="background:#f8fafc; padding:20px; border-radius:8px; border:1px solid #e2e8f0; margin-bottom:30px; text-align:left;">
@@ -1201,12 +1201,12 @@
                 <p style="margin-bottom:8px; font-size:0.85rem; color:#475569;"><strong>Email:</strong> <span
                         id="payment-email"></span></p>
                 <p style="margin-bottom:0px; font-size:0.85rem; color:#475569;"><strong>Method:</strong> Credit Card /
-                    GCash / Maya</p>
+                    GCash / PayMaya / GrabPay</p>
             </div>
 
             <button onclick="simulatePaymentSuccess()" id="pay-now-btn"
-                style="width:100%; background:#10B981; color:white; border:none; padding:15px; border-radius:8px; font-size:1rem; font-weight:700; cursor:pointer;">Pay
-                Now & Confirm</button>
+                style="width:100%; background:#10B981; color:white; border:none; padding:15px; border-radius:8px; font-size:1rem; font-weight:700; cursor:pointer;">Redirect
+                to Secure Gateway</button>
             <button onclick="cancelPayment()"
                 style="width:100%; background:transparent; color:#64748b; border:none; padding:12px; font-size:0.9rem; margin-top:10px; cursor:pointer; text-decoration:underline;">Cancel
                 Setup & Pay Later</button>
