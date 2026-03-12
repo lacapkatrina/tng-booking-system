@@ -1004,6 +1004,48 @@
             display: flex;
         }
 
+        .addon-qty-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 12px;
+            opacity: 0.3;
+            pointer-events: none;
+            transition: all 0.2s;
+        }
+
+        .addon-card.selected .addon-qty-controls {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .addon-qty-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 1.5px solid var(--border);
+            background: white;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .addon-qty-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .addon-qty-display {
+            font-size: 1rem;
+            font-weight: 700;
+            min-width: 24px;
+            text-align: center;
+        }
+
         /* 404 */
         .not-found {
             text-align: center;
@@ -1676,7 +1718,7 @@
                         : `<div class="addon-img-placeholder">🌟</div>`;
 
                     return `
-                    <div class="addon-card ${isSoldOut ? 'sold-out' : ''}" data-id="${a.id}" data-price="${a.price}" data-name="${a.name}">
+                    <div class="addon-card ${isSoldOut ? 'sold-out' : ''}" data-id="${a.id}" data-price="${a.price}" data-name="${a.name}" data-stock="${a.max_stock != null ? a.max_stock : 100}">
                         <div class="addon-check">✓</div>
                         ${imgHtml}
                         <div class="addon-body">
@@ -1685,6 +1727,11 @@
                             <div class="addon-footer">
                                 <div class="addon-price">+₱${parseFloat(a.price).toLocaleString()}</div>
                                 ${stockTag}
+                            </div>
+                            <div class="addon-qty-controls">
+                                <button class="addon-qty-btn minus" data-id="${a.id}">-</button>
+                                <span class="addon-qty-display" id="addon-qty-${a.id}">1</span>
+                                <button class="addon-qty-btn plus" data-id="${a.id}">+</button>
                             </div>
                         </div>
                     </div>`;
@@ -2019,23 +2066,75 @@
             // Book button
             document.getElementById('book-btn').addEventListener('click', handleBooking);
 
-            // Add-ons toggling
+            // Add-ons toggling and quantity logic
             document.querySelectorAll('.addon-card').forEach(card => {
-                card.addEventListener('click', () => {
-                    const id = card.dataset.id;
-                    const price = parseFloat(card.dataset.price);
-                    const name = card.dataset.name;
+                const id = card.dataset.id;
+                const price = parseFloat(card.dataset.price);
+                const name = card.dataset.name;
+                const maxStock = parseInt(card.dataset.stock || 100);
+
+                // Clicking the card itself
+                card.addEventListener('click', (e) => {
+                    // Don't toggle if clicking buttons
+                    if (e.target.closest('.addon-qty-btn')) return;
 
                     const existingIdx = state.addons.findIndex(a => a.id === id);
                     if (existingIdx >= 0) {
                         state.addons.splice(existingIdx, 1);
                         card.classList.remove('selected');
+                        // Reset display to 1
+                        const display = document.getElementById(`addon-qty-${id}`);
+                        if (display) display.textContent = '1';
                     } else {
                         state.addons.push({ id, price, name, quantity: 1 });
                         card.classList.add('selected');
                     }
                     updateSummary();
                 });
+
+                // Plus / Minus logic
+                const minusBtn = card.querySelector('.addon-qty-btn.minus');
+                const plusBtn = card.querySelector('.addon-qty-btn.plus');
+                const qtyDisplay = card.querySelector('.addon-qty-display');
+
+                if (minusBtn) {
+                    minusBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const addon = state.addons.find(a => a.id === id);
+                        if (addon && addon.quantity > 1) {
+                            addon.quantity--;
+                            qtyDisplay.textContent = addon.quantity;
+                            updateSummary();
+                        } else if (addon && addon.quantity === 1) {
+                            // De-select if quantity hits 0?
+                            // Usually safer to just keep at 1 or let them toggle the card.
+                            // Let's toggle card off if they hit minus at 1.
+                            card.click();
+                        }
+                    });
+                }
+
+                if (plusBtn) {
+                    plusBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        // If card not selected, select it first
+                        const existingIdx = state.addons.findIndex(a => a.id === id);
+                        if (existingIdx === -1) {
+                            state.addons.push({ id, price, name, quantity: 1 });
+                            card.classList.add('selected');
+                        }
+
+                        const addon = state.addons.find(a => a.id === id);
+                        if (addon && addon.quantity < maxStock) {
+                            addon.quantity++;
+                            qtyDisplay.textContent = addon.quantity;
+                            updateSummary();
+                        } else if (addon && addon.quantity >= maxStock) {
+                            // Visual feedback for limit reached?
+                            alert(`Sorry, only ${maxStock} units of ${name} available.`);
+                        }
+                    });
+                }
             });
 
             updateSummary();
@@ -2195,11 +2294,12 @@
 
             if (state.addons.length > 0) {
                 state.addons.forEach(a => {
-                    addonsTotal += a.price;
+                    const lineTotal = a.price * a.quantity;
+                    addonsTotal += lineTotal;
                     addonsHtml += `
                         <div class="pb-row" style="margin-top: 4px; color: var(--text-light); font-size: 0.85rem;">
-                            <span>+ ${a.name}</span>
-                            <span>₱${a.price.toLocaleString()}</span>
+                            <span>+ ${a.name} ${a.quantity > 1 ? `(×${a.quantity})` : ''}</span>
+                            <span>₱${lineTotal.toLocaleString()}</span>
                         </div>
                     `;
                 });
