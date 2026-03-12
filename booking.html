@@ -642,39 +642,41 @@
             box-shadow: none !important;
             border: 1px solid var(--border) !important;
             border-radius: 12px !important;
-            width: 100% !important;
-            max-width: 100%;
-            padding: 10px;
+            width: 320px !important;
+            margin: 0 auto;
+            padding: 5px;
         }
 
         .flatpickr-innerContainer,
         .flatpickr-rContainer,
-        .flatpickr-days,
+        .flatpickr-days {
+            width: 310px !important;
+        }
+
         .dayContainer {
-            width: 100% !important;
-            min-width: 100% !important;
-            max-width: 100% !important;
+            width: 310px !important;
+            min-width: 310px !important;
+            max-width: 310px !important;
         }
 
         .flatpickr-day {
-            height: 56px !important;
-            line-height: normal !important;
-            display: flex !important;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
+            height: 42px !important;
+            line-height: 42px !important;
             border-radius: 8px !important;
-            font-weight: 600;
-            max-width: none !important;
             border: none !important;
-            margin-top: 2px !important;
+            font-weight: 600 !important;
+            font-size: 0.88rem !important;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            justify-content: center !important;
         }
 
         .fp-price {
-            font-size: 0.65rem;
-            color: var(--text-light);
-            font-weight: 500;
-            margin-top: 3px;
+            font-size: 0.6rem !important;
+            margin-top: -14px !important;
+            color: #94A3B8 !important;
+            font-weight: 400 !important;
         }
 
         .flatpickr-day.selected .fp-price {
